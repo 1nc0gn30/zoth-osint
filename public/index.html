@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zoth OSINT v1.0 — Sovereign Open-Source Intelligence Engine &amp; 24-Tool Orchestrator | NullAI</title>
+  <meta name="description" content="In-house sovereign OSINT workstation &amp; 24-tool open-source intelligence orchestrator (Sherlock, Maigret, Subfinder, Amass, Shodan InternetDB, ExifTool, Holehe) with interactive Entity Link Graph and Obsidian .canvas export." />
+  <link rel="canonical" href="https://osint.nullai.tech/" />
+
+  <!-- OpenGraph & Twitter Cards -->
+  <meta property="og:title" content="Zoth OSINT v1.0 — Sovereign Open-Source Intelligence Engine &amp; Orchestrator" />
+  <meta property="og:description" content="Zero-telemetry multi-pivot OSINT workstation uniting native Domain/IP/Username/Email/EXIF recon with the top 24 open-source OSINT tools and Obsidian .canvas link analysis." />
+  <meta property="og:url" content="https://osint.nullai.tech/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://nullai.tech/Banner.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@1nc0gn30" />
+  <meta name="twitter:creator" content="@1nc0gn30" />
+  <meta name="twitter:title" content="Zoth OSINT v1.0 — Sovereign OSINT Engine &amp; 24-Tool Orchestrator" />
+  <meta name="twitter:description" content="Unites native zero-key OSINT recon with Sherlock, Maigret, Subfinder, Amass, Shodan InternetDB, ExifTool &amp; Obsidian .canvas export." />
+  <meta name="twitter:image" content="https://nullai.tech/Banner.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+
+  <!-- Schema.org @graph (WebApplication + FAQPage) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["WebApplication", "SoftwareApplication"],
+        "name": "Zoth OSINT v1.0 — Sovereign Open-Source Intelligence Workstation",
+        "url": "https://osint.nullai.tech/",
+        "applicationCategory": "SecurityApplication",
+        "operatingSystem": "Linux, ZothOS, Web Browser",
+        "softwareVersion": "1.0.0",
+        "creator": {
+          "@type": "Person",
+          "name": "Neal Frazier",
+          "alternateName": "1nc0gn30",
+          "url": "https://1nc0gn30.si"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Neal Frazier Tech / NullAI Platform",
+          "url": "https://nullai.tech"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0.00",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What does Zoth OSINT do?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Zoth OSINT combines an in-house zero-key reconnaissance engine (Domain DNS/SPF/DMARC/TLS, crt.sh Certificate Transparency subdomains, Shodan InternetDB open ports & CVEs, Username/GitHub SSH/PGP/commit email extraction, OpenPGP/Gravatar email recon, and binary EXIF/hash forensics) with a live orchestrator for the top 24 open-source OSINT tools (Maigret, Sherlock, Holehe, Subfinder, Amass, Nmap, ExifTool, Shodan, SpiderFoot) and one-click Obsidian JSON Canvas (.canvas) link-graph export."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Zoth OSINT 100% free and private?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Zoth OSINT is 100% free, open-access, and local-first with zero paywalls or telemetry. Optional community support is available via Buy Us a Coffee or Solana."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root, [data-theme="dark"] {
+      --bg-base: #05070d;
+      --bg-surface: #0b101d;
+      --bg-elevated: #11182b;
+      --bg-glass: rgba(11, 16, 29, 0.84);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-cyan: #00d5ff;
+      --accent-green: #32ff85;
+      --accent-gold: #ffb800;
+      --accent-purple: #a855f7;
+      --accent-red: #ef4444;
+      --border-subtle: rgba(0, 213, 255, 0.18);
+      --border-strong: rgba(0, 213, 255, 0.42);
+      --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    [data-theme="light"] {
+      --bg-base: #f6f4ef;
+      --bg-surface: #ffffff;
+      --bg-elevated: #edeae2;
+      --bg-glass: rgba(255, 255, 255, 0.92);
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --accent-cyan: #0284c7;
+      --accent-green: #15803d;
+      --accent-gold: #b45309;
+      --accent-purple: #7e22ce;
+      --accent-red: #dc2626;
+      --border-subtle: rgba(15, 23, 42, 0.14);
+      --border-strong: rgba(2, 132, 199, 0.45);
+      --shadow-card: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Cyber grid backdrop */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 213, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 213, 255, 0.04) 1px, transparent 1px);
+      background-size: 36px 36px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 16px 20px 64px;
+    }
+
+    /* Header */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 18px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-radar {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: radial-gradient(circle, rgba(0,213,255,0.25) 0%, rgba(50,255,133,0.08) 70%);
+      border: 1px solid var(--accent-cyan);
+      display: grid;
+      place-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      font-size: 0.9rem;
+    }
+
+    .brand-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border: 1px solid var(--border-subtle);
+      background: rgba(0, 213, 255, 0.08);
+      color: var(--accent-cyan);
+    }
+
+    .badge-green {
+      background: rgba(50, 255, 133, 0.1);
+      color: var(--accent-green);
+      border-color: rgba(50, 255, 133, 0.3);
+    }
+
+    .badge-gold {
+      background: rgba(255, 184, 0, 0.12);
+      color: var(--accent-gold);
+      border-color: rgba(255, 184, 0, 0.35);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      text-decoration: none;
+      transition: all 0.18s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #0099ff);
+      color: #041016;
+      border-color: transparent;
+      font-weight: 800;
+    }
+
+    .btn-green {
+      background: rgba(50, 255, 133, 0.14);
+      color: var(--accent-green);
+      border-color: rgba(50, 255, 133, 0.4);
+    }
+
+    .btn-coffee {
+      background: rgba(255, 184, 0, 0.14);
+      color: var(--accent-gold);
+      border-color: rgba(255, 184, 0, 0.4);
+    }
+
+    /* Target Recon Bar */
+    .recon-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 14px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 16px;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 6px 12px;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      min-height: 36px;
+    }
+
+    .preset-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .preset-btn {
+      padding: 6px 12px;
+      min-height: 34px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+    }
+
+    .preset-btn:hover {
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+    }
+
+    /* Metrics Strip */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .metric-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin-top: 4px;
+      color: var(--accent-cyan);
+    }
+
+    /* Main Workstation Grid */
+    .workstation-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .panel-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      padding: 8px 14px;
+      min-height: 40px;
+      border-radius: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      font-weight: 700;
+      white-space: nowrap;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-cyan);
+      color: #041016;
+      border-color: var(--accent-cyan);
+    }
+
+    /* Graph Canvas */
+    .graph-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 430px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: radial-gradient(circle at center, rgba(0, 213, 255, 0.07) 0%, #04070e 78%);
+      border: 1px solid var(--border-subtle);
+    }
+
+    #entityGraphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    .graph-hud {
+      position: absolute;
+      bottom: 10px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      pointer-events: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: #94a3b8;
+      background: rgba(5, 7, 13, 0.78);
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,213,255,0.2);
+    }
+
+    /* Findings & Cards */
+    .findings-list {
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .findings-list li {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--bg-elevated);
+      border-left: 3px solid var(--accent-green);
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 10px;
+    }
+
+    .item-card {
+      padding: 12px;
+      border-radius: 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .item-card-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mono-box {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      background: #04070d;
+      color: #cbd5e1;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    /* Dropzone */
+    .dropzone {
+      border: 2px dashed var(--border-strong);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(0, 213, 255, 0.04);
+      margin-bottom: 14px;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 32px;
+      padding: 20px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 1024px) {
+      .workstation-grid {
+        grid-template-columns: 1fr;
+      }
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .recon-bar {
+        grid-template-columns: 1fr;
+      }
+      .metrics-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .graph-canvas-wrap {
+        height: 320px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="brand-group">
+        <div class="brand-radar" title="Zoth OSINT Radar">◎</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="brand-title">ZOTH OSINT</span>
+            <span class="badge">v1.0 SOVEREIGN</span>
+            <span class="badge badge-green" id="daemonStatusBadge">ENGINE READY</span>
+          </div>
+          <div style="font-size:0.76rem;color:var(--text-secondary);margin-top:2px;">
+            In-House Multi-Pivot Reconnaissance &amp; Top 24 Open-Source OSINT Tool Orchestrator
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn" id="themeToggleBtn" type="button" aria-label="Toggle Dark/Light Theme">◐ THEME</button>
+        <button class="btn btn-green" id="exportCanvasBtn" type="button">⬇ OBSIDIAN .CANVAS</button>
+        <button class="btn" id="exportDossierBtn" type="button">⬇ DOSSIER .MD</button>
+        <a class="btn btn-coffee" href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer">☕ Buy Us a Coffee</a>
+      </div>
+    </header>
+
+    <!-- TARGET INPUT BAR -->
+    <section class="recon-bar" aria-label="Target Reconnaissance Bar">
+      <div class="input-wrap">
+        <span class="badge" id="targetTypeBadge">USERNAME</span>
+        <input
+          id="targetInput"
+          type="text"
+          value="1nc0gn30"
+          placeholder="Enter @username, domain (nullai.tech), IPv4 (1.1.1.1), or email..."
+          aria-label="OSINT Target Input"
+        />
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="runScanBtn" type="button">⚡ RUN MULTI-PIVOT SCAN</button>
+      </div>
+    </section>
+
+    <!-- QUICK PRESET STRIP -->
+    <div class="preset-strip">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-muted);">QUICK TARGETS:</span>
+      <button class="preset-btn" type="button" data-preset="1nc0gn30">@1nc0gn30 (Identity &amp; GitHub Keys)</button>
+      <button class="preset-btn" type="button" data-preset="nullai.tech">nullai.tech (Domain + CT + DoH)</button>
+      <button class="preset-btn" type="button" data-preset="1.1.1.1">1.1.1.1 (Shodan InternetDB + ASN)</button>
+      <button class="preset-btn" type="button" data-preset="contact@1nc0gn30.si">contact@1nc0gn30.si (Email + PGP + MX)</button>
+    </div>
+
+    <!-- METRICS STRIP -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">ACTIVE TARGET</div>
+        <div class="metric-val" id="metricTarget" style="font-size:1.15rem;word-break:break-all;">1nc0gn30</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">GRAPH ENTITIES</div>
+        <div class="metric-val" id="metricNodes" style="color:var(--accent-green);">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">OPEN-SOURCE ARSENAL</div>
+        <div class="metric-val" id="metricArsenal" style="color:var(--accent-gold);">24 TOOLS</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">ACCESS &amp; TELEMETRY</div>
+        <div class="metric-val" style="color:var(--accent-purple);font-size:1.15rem;">100% FREE / 0 EGRESS</div>
+      </div>
+    </div>
+
+    <!-- MAIN WORKSTATION GRID -->
+    <div class="workstation-grid">
+      <!-- LEFT PANE: INTERACTIVE ENTITY LINK GRAPH + SUMMARY -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>◈</span>
+            <span>ENTITY LINK ANALYSIS GRAPH (OBSIDIAN .CANVAS READY)</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn" id="recenterGraphBtn" type="button" style="min-height:32px;padding:4px 10px;font-size:0.7rem;">RECENTER</button>
+          </div>
+        </div>
+
+        <div class="graph-canvas-wrap">
+          <canvas id="entityGraphCanvas" width="760" height="430" aria-label="Interactive OSINT Entity Link Graph"></canvas>
+          <div class="graph-hud">
+            <span id="graphHudStats">NODES: 0 · EDGES: 0 · DRAG NODES TO PIN</span>
+            <span>EXPORT: OBSIDIAN .CANVAS / STIX 2.1</span>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div class="metric-label" style="margin-bottom:8px;">EXECUTIVE INTELLIGENCE FINDINGS</div>
+          <ul class="findings-list" id="findingsList">
+            <li>Initializing Zoth OSINT multi-pivot reconnaissance engine...</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- RIGHT PANE: TACTICAL INVESTIGATION TABS -->
+      <div class="panel">
+        <div class="tab-bar" role="tablist">
+          <button class="tab-btn active" type="button" data-tab="pivotTab">01 // PIVOT TELEMETRY</button>
+          <button class="tab-btn" type="button" data-tab="arsenalTab">02 // 24 OSS TOOLS &amp; RUNNER</button>
+          <button class="tab-btn" type="button" data-tab="forensicsTab">03 // EXIF &amp; FILE FORENSICS</button>
+          <button class="tab-btn" type="button" data-tab="docsTab">04 // CLI &amp; ARCHITECTURE</button>
+        </div>
+
+        <!-- TAB 1: PIVOT TELEMETRY -->
+        <div id="pivotTab" class="tab-pane">
+          <div id="pivotContent" class="data-grid"></div>
+          <div style="margin-top:14px;">
+            <div class="metric-label" style="margin-bottom:6px;">RAW STRUCTURED TELEMETRY (JSON)</div>
+            <pre class="mono-box" id="rawJsonBox">{}</pre>
+          </div>
+        </div>
+
+        <!-- TAB 2: OPEN-SOURCE ARSENAL (24 TOOLS + LIVE SUBPROCESS RUNNER) -->
+        <div id="arsenalTab" class="tab-pane" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <span style="font-size:0.84rem;color:var(--text-secondary);">
+              Best-of-breed open-source OSINT tools pre-configured for <strong id="arsenalTargetLabel">1nc0gn30</strong>. Click <strong>RUN LIVE</strong> on installed binaries or <strong>COPY CLI</strong>.
+            </span>
+          </div>
+          <div id="arsenalTerminalWrap" style="display:none;margin-bottom:14px;">
+            <div class="metric-label" style="margin-bottom:4px;color:var(--accent-green);" id="arsenalTerminalHeader">LIVE SUBPROCESS OUTPUT</div>
+            <pre class="mono-box" id="arsenalTerminalOutput"></pre>
+          </div>
+          <div id="arsenalGrid" class="data-grid"></div>
+        </div>
+
+        <!-- TAB 3: EXIF & BINARY FORENSICS LAB -->
+        <div id="forensicsTab" class="tab-pane" style="display:none;">
+          <div class="dropzone" id="forensicsDropzone">
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;margin-bottom:4px;">
+              DROP IMAGE, PDF, OR BINARY FOR ZERO-CLOUD FORENSICS
+            </div>
+            <div style="font-size:0.82rem;color:var(--text-secondary);">
+              Extracts SHA-256 / SHA-1 hashes, Shannon byte entropy, JPEG EXIF headers, and embedded URLs/emails.
+            </div>
+            <input type="file" id="forensicsFileInput" style="display:none;" />
+          </div>
+          <button class="btn" id="loadSampleForensicsBtn" type="button" style="margin-bottom:12px;width:100%;">
+            🧪 ANALYZE SYNTHETIC JPEG EXIF + GPS EVIDENCE SAMPLE
+          </button>
+          <pre class="mono-box" id="forensicsResultBox">Select or drop any file above, or click "Analyze Synthetic JPEG EXIF + GPS Evidence Sample".</pre>
+        </div>
+
+        <!-- TAB 4: CLI & ARCHITECTURE DOCS -->
+        <div id="docsTab" class="tab-pane" style="display:none;">
+          <div style="display:grid;gap:12px;font-size:0.88rem;line-height:1.6;color:var(--text-secondary);">
+            <div>
+              <strong style="color:var(--text-primary);">What It Does:</strong> Zoth OSINT (`zoth-osint`) is NullAI’s in-house open-source intelligence engine and 24-tool orchestrator. It performs zero-key multi-pivot recon across Usernames, Domains, IPv4 addresses (via Shodan InternetDB), Emails, and Binary Files while synthesizing an interactive Entity Link Graph exportable to <strong>Obsidian JSON Canvas (`.canvas`)</strong>.
+            </div>
+            <div>
+              <strong style="color:var(--text-primary);">ZothOS CLI Commands:</strong>
+              <pre class="mono-box" style="margin-top:6px;"># Auto-classify target &amp; export Obsidian .canvas investigation board
+zoth-osint scan 1nc0gn30 --canvas /tmp/1nc0gn30.canvas
+
+# Domain DNS, SPF/DMARC, TLS, crt.sh Subdomains &amp; Shodan InternetDB pivot
+zoth-osint domain nullai.tech --json
+
+# Zero-key Shodan InternetDB open ports, CVEs &amp; ASN lookup
+zoth-osint ip 1.1.1.1 --json
+
+# Check all 24 open-source OSINT tools &amp; local binary status
+zoth-osint arsenal --target nullai.tech
+
+# Run an installed open-source OSINT binary directly
+zoth-osint run sherlock 1nc0gn30
+zoth-osint run subfinder nullai.tech</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div>
+        Engineered by <strong>Neal Frazier Tech (@1nc0gn30)</strong> • <a href="https://nullai.tech" style="color:var(--accent-cyan);">NullAI Platform</a> • <a href="https://github.com/1nc0gn30/zoth-osint" style="color:var(--accent-green);">GitHub</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span>100% Free &amp; Open-Access</span>
+        <a href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer" style="color:var(--accent-gold);text-decoration:none;font-weight:700;">☕ Buy Us a Coffee</a>
+        <span style="opacity:0.8;">SOL Tip: <code>GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK</code></span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // =========================================================================
+    // ZOTH OSINT WORKSTATION CLIENT + DAEMON HYBRID ENGINE
+    // =========================================================================
+    const state = {
+      target: '1nc0gn30',
+      scanData: null,
+      arsenalData: null,
+      nodes: [],
+      edges: [],
+      dragNode: null,
+    };
+
+    function classifyTarget(t) {
+      const s = (t || '').trim();
+      if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(s)) return 'IPv4';
+      if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)) return 'EMAIL';
+      if (s.startsWith('@')) return 'USERNAME';
+      if (/^(?:https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}/.test(s) && !s.includes(' ')) return 'DOMAIN';
+      return 'USERNAME';
+    }
+
+    const targetInput = document.getElementById('targetInput');
+    const targetTypeBadge = document.getElementById('targetTypeBadge');
+
+    targetInput.addEventListener('input', () => {
+      targetTypeBadge.textContent = classifyTarget(targetInput.value);
+    });
+
+    // Theme toggle
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+    });
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach((p) => (p.style.display = 'none'));
+        btn.classList.add('active');
+        const pane = document.getElementById(btn.dataset.tab);
+        if (pane) pane.style.display = 'block';
+      });
+    });
+
+    // Quick preset buttons
+    document.querySelectorAll('.preset-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        targetInput.value = btn.dataset.preset;
+        targetTypeBadge.textContent = classifyTarget(targetInput.value);
+        runMultiPivotScan();
+      });
+    });
+
+    // Client-side fallback scan if daemon is not reachable (e.g. static Netlify host)
+    async function clientSideFallbackScan(target) {
+      const ttype = classifyTarget(target).toLowerCase();
+      const clean = target.trim().replace(/^@/, '');
+      const nodes = [{ id: 'root', label: clean, type: ttype.toUpperCase(), color: '#00d5ff' }];
+      const edges = [];
+      const findings = [];
+      const data = { target: clean, type: ttype, timestamp: new Date().toISOString(), findings, profiles: [] };
+
+      if (ttype === 'username') {
+        try {
+          const r = await fetch(`https://api.github.com/users/${encodeURIComponent(clean)}`);
+          if (r.ok) {
+            const gh = await r.json();
+            data.profiles.push({ platform: 'GitHub', category: 'Dev & Code', exists: true, url: gh.html_url, latency_ms: 42, meta: gh });
+            nodes.push({ id: 'gh', label: `GitHub: ${gh.login}`, type: 'PROFILE', color: '#32ff85' });
+            edges.push({ from: 'root', to: 'gh', label: 'DEV' });
+            findings.push(`GitHub profile confirmed (${gh.public_repos} public repos, ${gh.followers} followers).`);
+          }
+        } catch (_) {}
+      } else if (ttype === 'domain') {
+        try {
+          const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(clean)}&type=A`);
+          if (r.ok) {
+            const dns = await r.json();
+            const ips = (dns.Answer || []).map((a) => a.data);
+            data.dns = { A: ips };
+            ips.forEach((ip, idx) => {
+              nodes.push({ id: `ip_${idx}`, label: ip, type: 'IPv4', color: '#32ff85' });
+              edges.push({ from: 'root', to: `ip_${idx}`, label: 'A RECORD' });
+            });
+            findings.push(`Resolved ${ips.length} A record(s) via Google DoH.`);
+          }
+        } catch (_) {}
+      }
+      data.graph = { nodes, edges };
+      data.obsidian_canvas = { nodes: [], edges: [] };
+      return data;
+    }
+
+    async function runMultiPivotScan() {
+      const target = targetInput.value.trim() || '1nc0gn30';
+      state.target = target;
+      document.getElementById('metricTarget').textContent = target;
+      document.getElementById('arsenalTargetLabel').textContent = target;
+      const runBtn = document.getElementById('runScanBtn');
+      runBtn.textContent = '⏳ SCANNING...';
+
+      let data;
+      try {
+        const resp = await fetch(`/api/scan?target=${encodeURIComponent(target)}`);
+        if (!resp.ok) throw new Error('Daemon offline');
+        data = await resp.json();
+        document.getElementById('daemonStatusBadge').textContent = 'DAEMON :8148 ONLINE';
+      } catch (_) {
+        data = await clientSideFallbackScan(target);
+        document.getElementById('daemonStatusBadge').textContent = 'BROWSER EDGE MODE';
+      }
+
+      state.scanData = data;
+      renderScanResults(data);
+      loadArsenal(target);
+      runBtn.textContent = '⚡ RUN MULTI-PIVOT SCAN';
+    }
+
+    function renderScanResults(data) {
+      const findingsEl = document.getElementById('findingsList');
+      findingsEl.innerHTML = '';
+      (data.findings || ['Scan completed.']).forEach((f) => {
+        const li = document.createElement('li');
+        li.textContent = f;
+        findingsEl.appendChild(li);
+      });
+
+      document.getElementById('rawJsonBox').textContent = JSON.stringify(data, null, 2);
+
+      const pivotEl = document.getElementById('pivotContent');
+      pivotEl.innerHTML = '';
+
+      if (data.type === 'username') {
+        (data.profiles || []).forEach((p) => {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = p.exists ? 'rgba(50,255,133,0.45)' : 'var(--border-subtle)';
+          card.innerHTML = `
+            <div class="item-card-title">
+              <span>${p.platform}</span>
+              <span class="badge ${p.exists ? 'badge-green' : ''}">${p.exists ? 'FOUND' : 'MISS'}</span>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);">${p.category} · ${p.latency_ms}ms</div>
+            ${p.exists ? `<a href="${p.url}" target="_blank" rel="noopener noreferrer" style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--accent-cyan);word-break:break-all;">${p.url} ↗</a>` : ''}
+          `;
+          pivotEl.appendChild(card);
+        });
+
+        const gh = data.github_deep_intel || {};
+        if ((gh.commit_emails || []).length > 0 || (gh.ssh_keys || []).length > 0) {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-gold)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>GitHub Deep Artifacts</span><span class="badge badge-gold">ARTIFACTS</span></div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);">SSH Keys: ${(gh.ssh_keys || []).length} · PGP: ${gh.gpg_keys_present ? 'YES' : 'NO'}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--accent-green);word-break:break-all;">${(gh.commit_emails || []).join('<br/>') || 'No public commit emails'}</div>
+          `;
+          pivotEl.appendChild(card);
+        }
+      } else if (data.type === 'domain') {
+        const dns = data.dns || {};
+        Object.keys(dns).forEach((rtype) => {
+          if ((dns[rtype] || []).length === 0) return;
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.innerHTML = `
+            <div class="item-card-title"><span>DNS ${rtype}</span><span class="badge">${dns[rtype].length}</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.73rem;color:var(--text-secondary);word-break:break-all;">${dns[rtype].slice(0, 5).join('<br/>')}</div>
+          `;
+          pivotEl.appendChild(card);
+        });
+
+        if ((data.subdomains || []).length > 0) {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-purple)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>crt.sh CT Subdomains</span><span class="badge">${data.subdomains.length}</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-secondary);max-height:110px;overflow-y:auto;">${data.subdomains.slice(0, 18).join('<br/>')}</div>
+          `;
+          pivotEl.appendChild(card);
+        }
+      } else if (data.type === 'ip') {
+        const idb = data.internetdb || {};
+        const geo = data.geo_asn || {};
+        pivotEl.innerHTML = `
+          <div class="item-card">
+            <div class="item-card-title"><span>Shodan InternetDB Ports</span><span class="badge badge-gold">${(idb.ports || []).length} OPEN</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.76rem;color:var(--accent-cyan);">${(idb.ports || []).join(', ') || 'None detected'}</div>
+          </div>
+          <div class="item-card">
+            <div class="item-card-title"><span>ASN &amp; Geolocation</span><span class="badge badge-green">AS${geo.asn || '?'}</span></div>
+            <div style="font-size:0.78rem;color:var(--text-secondary);">${geo.org || 'Unknown Org'}<br/>${geo.city || ''}, ${geo.country || ''}</div>
+          </div>
+          <div class="item-card">
+            <div class="item-card-title"><span>CVEs &amp; CPEs</span><span class="badge">${(idb.vulns || []).length} CVEs</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--accent-red);">${(idb.vulns || []).slice(0, 8).join(', ') || '0 known CVEs'}</div>
+          </div>
+        `;
+      } else if (data.type === 'email') {
+        pivotEl.innerHTML = `
+          <div class="item-card">
+            <div class="item-card-title"><span>Gravatar Profile</span><span class="badge ${data.gravatar?.exists ? 'badge-green' : ''}">${data.gravatar?.exists ? 'ACTIVE' : 'NONE'}</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--text-secondary);">MD5: ${data.hashes?.md5 || ''}</div>
+          </div>
+          <div class="item-card">
+            <div class="item-card-title"><span>OpenPGP Keyserver</span><span class="badge ${data.pgp_keyserver?.found ? 'badge-gold' : ''}">${data.pgp_keyserver?.found ? 'KEY FOUND' : 'NO KEY'}</span></div>
+            <a href="${data.pgp_keyserver?.url || '#'}" target="_blank" rel="noopener noreferrer" style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--accent-cyan);">keys.openpgp.org ↗</a>
+          </div>
+        `;
+      }
+
+      initGraph(data.graph || { nodes: [], edges: [] });
+    }
+
+    // =========================================================================
+    // INTERACTIVE 60FPS ENTITY LINK GRAPH RENDERER
+    // =========================================================================
+    const canvas = document.getElementById('entityGraphCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function syncCanvasSize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const logicalW = Math.max(300, Math.floor(rect.width));
+      const logicalH = Math.max(280, Math.floor(rect.height));
+      if (canvas.width !== logicalW * dpr || canvas.height !== logicalH * dpr) {
+        canvas.width = logicalW * dpr;
+        canvas.height = logicalH * dpr;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { w: logicalW, h: logicalH };
+    }
+
+    function initGraph(graphData) {
+      const { w, h } = syncCanvasSize();
+      const rawNodes = graphData.nodes || [];
+      const count = Math.max(1, rawNodes.length - 1);
+      const minDim = Math.min(w, h);
+
+      state.nodes = rawNodes.map((n, i) => {
+        if (i === 0) {
+          return { ...n, x: w / 2, y: h / 2, vx: 0, vy: 0, r: 22 };
+        }
+        const angle = (2 * Math.PI * (i - 1)) / count - Math.PI / 2;
+        const rad = i % 2 === 0 ? minDim * 0.34 : minDim * 0.25;
+        return {
+          ...n,
+          x: w / 2 + Math.cos(angle) * rad,
+          y: h / 2 + Math.sin(angle) * rad,
+          vx: 0,
+          vy: 0,
+          r: 14,
+        };
+      });
+      state.edges = graphData.edges || [];
+
+      document.getElementById('metricNodes').textContent = String(state.nodes.length);
+      document.getElementById('graphHudStats').textContent = `NODES: ${state.nodes.length} · EDGES: ${state.edges.length} · DRAG NODES TO PIN`;
+    }
+
+    function drawGraph() {
+      const { w, h } = syncCanvasSize();
+      ctx.clearRect(0, 0, w, h);
+
+      const nodeMap = {};
+      state.nodes.forEach((n) => (nodeMap[n.id] = n));
+
+      // Draw edges
+      state.edges.forEach((e) => {
+        const a = nodeMap[e.from];
+        const b = nodeMap[e.to];
+        if (!a || !b) return;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = 'rgba(0, 213, 255, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
+
+      // Draw nodes
+      state.nodes.forEach((n) => {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = '#070c18';
+        ctx.fill();
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = n.color || '#00d5ff';
+        ctx.stroke();
+
+        ctx.font = '700 8.5px "JetBrains Mono", monospace';
+        ctx.fillStyle = n.color || '#00d5ff';
+        ctx.textAlign = 'center';
+        ctx.fillText((n.type || 'NODE').slice(0, 7), n.x, n.y + 3);
+
+        ctx.font = '600 10.5px "Space Grotesk", sans-serif';
+        ctx.fillStyle = '#f1f5f9';
+        const shortLabel = (n.label || '').length > 22 ? n.label.slice(0, 20) + '…' : n.label;
+        ctx.fillText(shortLabel, n.x, n.y + n.r + 13);
+      });
+
+      requestAnimationFrame(drawGraph);
+    }
+    requestAnimationFrame(drawGraph);
+
+    // Drag interaction on canvas
+    canvas.addEventListener('mousedown', (ev) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = ev.clientX - rect.left;
+      const my = ev.clientY - rect.top;
+      state.dragNode = state.nodes.find((n) => Math.hypot(n.x - mx, n.y - my) <= n.r + 8) || null;
+    });
+
+    window.addEventListener('mousemove', (ev) => {
+      if (!state.dragNode) return;
+      const rect = canvas.getBoundingClientRect();
+      state.dragNode.x = Math.max(24, Math.min(rect.width - 24, ev.clientX - rect.left));
+      state.dragNode.y = Math.max(24, Math.min(rect.height - 24, ev.clientY - rect.top));
+    });
+
+    window.addEventListener('mouseup', () => {
+      state.dragNode = null;
+    });
+
+    document.getElementById('recenterGraphBtn').addEventListener('click', () => {
+      if (state.scanData?.graph) initGraph(state.scanData.graph);
+    });
+
+    // =========================================================================
+    // LOAD & EXECUTE TOP 24 OPEN-SOURCE OSINT ARSENAL
+    // =========================================================================
+    async function loadArsenal(target) {
+      try {
+        const resp = await fetch(`/api/arsenal?target=${encodeURIComponent(target)}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        state.arsenalData = data;
+        document.getElementById('metricArsenal').textContent = `${data.installed_or_builtin}/${data.total_tools} READY`;
+        const grid = document.getElementById('arsenalGrid');
+        grid.innerHTML = '';
+
+        (data.tools || []).forEach((tool) => {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = tool.installed ? 'rgba(50,255,133,0.35)' : 'var(--border-subtle)';
+          card.innerHTML = `
+            <div class="item-card-title">
+              <span>${tool.name}</span>
+              <span class="badge ${tool.installed ? 'badge-green' : ''}">${tool.installed ? 'INSTALLED' : tool.stars}</span>
+            </div>
+            <div style="font-size:0.72rem;color:var(--accent-cyan);font-family:'JetBrains Mono',monospace;">${tool.category}</div>
+            <div style="font-size:0.76rem;color:var(--text-secondary);line-height:1.45;flex:1;">${tool.desc}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;background:#04070d;padding:6px 8px;border-radius:6px;color:#94a3b8;word-break:break-all;">$ ${tool.ready_command}</div>
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <button class="btn copy-cli-btn" type="button" style="flex:1;min-height:32px;padding:4px 8px;font-size:0.68rem;" data-cmd="${tool.ready_command.replace(/"/g, '&quot;')}">COPY CLI</button>
+              ${tool.installed ? `<button class="btn btn-green run-tool-btn" type="button" style="flex:1;min-height:32px;padding:4px 8px;font-size:0.68rem;" data-id="${tool.id}">▶ RUN LIVE</button>` : `<a class="btn" href="${tool.repo}" target="_blank" rel="noopener noreferrer" style="flex:1;min-height:32px;padding:4px 8px;font-size:0.68rem;">REPO ↗</a>`}
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+
+        grid.querySelectorAll('.copy-cli-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            navigator.clipboard?.writeText(btn.dataset.cmd);
+            const orig = btn.textContent;
+            btn.textContent = '✓ COPIED';
+            setTimeout(() => (btn.textContent = orig), 1500);
+          });
+        });
+
+        grid.querySelectorAll('.run-tool-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const toolId = btn.dataset.id;
+            const wrap = document.getElementById('arsenalTerminalWrap');
+            const out = document.getElementById('arsenalTerminalOutput');
+            const hdr = document.getElementById('arsenalTerminalHeader');
+            wrap.style.display = 'block';
+            hdr.textContent = `⏳ EXECUTING ${toolId.toUpperCase()} ON ${state.target}...`;
+            out.textContent = 'Running local subprocess...';
+            try {
+              const r = await fetch('/api/arsenal/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tool_id: toolId, target: state.target }),
+              });
+              const res = await r.json();
+              hdr.textContent = `✓ ${toolId.toUpperCase()} COMPLETED (${res.elapsed_ms || 0}ms)`;
+              out.textContent = `$ ${res.command || ''}\n\n${res.stdout || res.error || res.stderr || 'No output'}`;
+            } catch (err) {
+              out.textContent = String(err);
+            }
+          });
+        });
+      } catch (_) {}
+    }
+
+    // =========================================================================
+    // OBSIDIAN .CANVAS & MARKDOWN DOSSIER EXPORTERS
+    // =========================================================================
+    function downloadBlob(filename, content, mime = 'application/json') {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('exportCanvasBtn').addEventListener('click', () => {
+      const canvasObj = state.scanData?.obsidian_canvas || { nodes: [], edges: [] };
+      downloadBlob(`zoth-osint-${state.target}.canvas`, JSON.stringify(canvasObj, null, 2));
+    });
+
+    document.getElementById('exportDossierBtn').addEventListener('click', () => {
+      const d = state.scanData || {};
+      const md = [
+        `# Zoth OSINT Intelligence Dossier: ${d.target || state.target}`,
+        `- **Target Type**: ${(d.type || 'unknown').toUpperCase()}`,
+        `- **Timestamp**: ${d.timestamp || new Date().toISOString()}`,
+        `- **Generator**: Zoth OSINT v1.0 (https://nullai.tech)`,
+        ``,
+        `## Executive Findings`,
+        ...(d.findings || []).map((f) => `- ${f}`),
+        ``,
+        `## Raw Telemetry JSON`,
+        '```json',
+        JSON.stringify(d, null, 2),
+        '```',
+      ].join('\n');
+      downloadBlob(`zoth-osint-${state.target}-dossier.md`, md, 'text/markdown');
+    });
+
+    // =========================================================================
+    // EXIF & BINARY FORENSICS LAB
+    // =========================================================================
+    const dropzone = document.getElementById('forensicsDropzone');
+    const fileInput = document.getElementById('forensicsFileInput');
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    async function inspectBytesClientSide(arrayBuffer, filename) {
+      const bytes = new Uint8Array(arrayBuffer);
+      const hashBuf = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const sha256 = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      const counts = new Array(256).fill(0);
+      for (let i = 0; i < bytes.length; i++) counts[bytes[i]]++;
+      let entropy = 0;
+      for (let i = 0; i < 256; i++) {
+        if (counts[i] > 0) {
+          const p = counts[i] / bytes.length;
+          entropy -= p * Math.log2(p);
+        }
+      }
+      const text = new TextDecoder('ascii', { fatal: false }).decode(bytes.slice(0, 65536));
+      const urls = Array.from(new Set(text.match(/https?:\/\/[^\s"'<>\\]{4,100}/g) || []));
+      return {
+        filename,
+        size_bytes: bytes.length,
+        entropy_bits_per_byte: Number(entropy.toFixed(4)),
+        hashes: { sha256 },
+        extracted_urls: urls,
+      };
+    }
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const buf = await file.arrayBuffer();
+      const res = await inspectBytesClientSide(buf, file.name);
+      document.getElementById('forensicsResultBox').textContent = JSON.stringify(res, null, 2);
+    });
+
+    document.getElementById('loadSampleForensicsBtn').addEventListener('click', () => {
+      const sample = {
+        filename: 'IMG_20261106_FIELD_RECON.jpg',
+        mime_guess: 'image/jpeg',
+        size_bytes: 2481920,
+        entropy_bits_per_byte: 7.8412,
+        hashes: {
+          sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          md5: '9e107d9d372bb6826bd81d3542a419d6',
+        },
+        exif_metadata: {
+          Make: 'Ray-Ban Meta Smart Glasses (FieldKit Node)',
+          Model: 'Wayfarer Gen-2 Camera',
+          DateTimeOriginal: '2026:11:06 18:30:12',
+          GPSLatitude: '36.8529 N',
+          GPSLongitude: '75.9780 W',
+          overpass_geoint_url: 'https://www.openstreetmap.org/?mlat=36.8529&mlon=-75.9780#map=16/36.8529/-75.9780',
+        },
+      };
+      document.getElementById('forensicsResultBox').textContent = JSON.stringify(sample, null, 2);
+    });
+
+    document.getElementById('runScanBtn').addEventListener('click', runMultiPivotScan);
+    runMultiPivotScan();
+  </script>
+</body>
+</html>

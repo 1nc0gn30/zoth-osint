@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Zoth OSINT Workstation Daemon (server.py)
+Zoth OSINT Workstation Daemon v2.0 (server.py)
 Serves the Zoth OSINT Web Workstation on http://127.0.0.1:8148 and exposes:
   GET  /health
   GET  /api/scan?target=<target>
@@ -8,6 +8,10 @@ Serves the Zoth OSINT Web Workstation on http://127.0.0.1:8148 and exposes:
   GET  /api/arsenal?target=<target>
   POST /api/arsenal/run
   POST /api/forensics
+  GET  /api/wayback?domain=<domain>
+  GET  /api/dorks?target=<target>
+  GET  /api/cases
+  GET  /api/cases/<id>
 """
 
 import argparse
@@ -25,7 +29,14 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from engine.arsenal_runner import execute_arsenal_tool, get_arsenal_status  # noqa: E402
-from engine.osint_core import analyze_bytes_forensics, run_unified_scan  # noqa: E402
+from engine.case_store import get_case, list_cases  # noqa: E402
+from engine.osint_core import (  # noqa: E402
+    analyze_bytes_forensics,
+    classify_target,
+    recon_wayback,
+    run_unified_scan,
+    synthesize_dorks,
+)
 
 
 class ZothOsintHandler(BaseHTTPRequestHandler):
@@ -57,10 +68,11 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "zoth-osint",
-                    "version": "1.0.0",
+                    "version": "2.0.0",
                     "port": self.server.server_port,
                     "arsenal_total": arsenal["total_tools"],
                     "arsenal_installed": arsenal["installed_or_builtin"],
+                    "saved_cases": len(list_cases(limit=50)),
                 }
             )
             return
@@ -73,6 +85,33 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         if path == "/api/arsenal":
             target = (qs.get("target") or ["nullai.tech"])[0]
             self._send_json(get_arsenal_status(target))
+            return
+
+        if path == "/api/wayback":
+            domain = (qs.get("domain") or ["nullai.tech"])[0]
+            self._send_json(recon_wayback(domain))
+            return
+
+        if path == "/api/dorks":
+            target = (qs.get("target") or ["nullai.tech"])[0]
+            t_type = classify_target(target)
+            self._send_json({"target": target, "type": t_type, "dorks": synthesize_dorks(target, t_type)})
+            return
+
+        if path == "/api/cases":
+            self._send_json({"cases": list_cases(limit=25)})
+            return
+
+        if path.startswith("/api/cases/"):
+            try:
+                cid = int(path.split("/api/cases/")[1].strip("/"))
+                case_data = get_case(cid)
+                if case_data:
+                    self._send_json(case_data)
+                else:
+                    self._send_json({"error": "Case not found"}, status=404)
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=400)
             return
 
         # Serve static files from public/
@@ -129,13 +168,13 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Zoth OSINT Workstation Daemon")
+    parser = argparse.ArgumentParser(description="Zoth OSINT Workstation Daemon v2.0")
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8148, help="Bind port (default: 8148)")
     args = parser.parse_args()
 
     srv = ThreadingHTTPServer((args.host, args.port), ZothOsintHandler)
-    print(f"[zoth-osint] Sovereign OSINT Workstation listening on http://{args.host}:{args.port}")
+    print(f"[zoth-osint v2.0] Sovereign OSINT Workstation listening on http://{args.host}:{args.port}")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

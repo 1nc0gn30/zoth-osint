@@ -284,7 +284,7 @@ OPEN_SOURCE_OSINT_ARSENAL: List[Dict[str, Any]] = [
     },
 ]
 
-EXTRA_SEARCH_PATHS = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/zothos-ai-env/bin"]
+EXTRA_SEARCH_PATHS = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/zothos-ai-env/bin", "/home/zoth/.local/bin"]
 
 
 def find_binary(binary_name: Optional[str]) -> Optional[str]:
@@ -327,10 +327,21 @@ def get_arsenal_status(target: str = "nullai.tech") -> Dict[str, Any]:
     }
 
 
-ALLOWED_EXEC_TOOLS = {"sherlock", "subfinder", "dig", "whois", "nmap", "internetdb", "wayback-cdx", "git-commit-osint"}
+ALLOWED_EXEC_TOOLS = {
+    "sherlock",
+    "holehe",
+    "subfinder",
+    "dig",
+    "whois",
+    "nmap",
+    "httpx",
+    "internetdb",
+    "wayback-cdx",
+    "git-commit-osint",
+}
 
 
-def execute_arsenal_tool(tool_id: str, target: str, timeout_sec: int = 15) -> Dict[str, Any]:
+def execute_arsenal_tool(tool_id: str, target: str, timeout_sec: int = 18) -> Dict[str, Any]:
     """Safely execute a local open-source OSINT tool with strict argument validation and timeout."""
     import re
 
@@ -355,6 +366,8 @@ def execute_arsenal_tool(tool_id: str, target: str, timeout_sec: int = 15) -> Di
 
     if tool_id == "sherlock":
         cmd = [bin_path, clean_target.lstrip("@"), "--timeout", "4", "--print-found"]
+    elif tool_id == "holehe":
+        cmd = [bin_path, clean_target, "--only-used", "--no-color"]
     elif tool_id == "subfinder":
         cmd = [bin_path, "-d", clean_target, "-silent"]
     elif tool_id == "dig":
@@ -363,6 +376,8 @@ def execute_arsenal_tool(tool_id: str, target: str, timeout_sec: int = 15) -> Di
         cmd = [bin_path, clean_target]
     elif tool_id == "nmap":
         cmd = [bin_path, "-Pn", "--top-ports", "20", "--open", clean_target]
+    elif tool_id == "httpx":
+        cmd = [bin_path, "-u", clean_target, "-title", "-tech-detect", "-status-code", "-silent", "-no-color"]
     elif tool_id == "internetdb":
         cmd = [bin_path, "-s", f"https://internetdb.shodan.io/{clean_target}"]
     elif tool_id == "wayback-cdx":

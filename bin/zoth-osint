@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-zoth-osint — Sovereign Open-Source Intelligence Engine & Orchestrator CLI
+zoth-osint v2.0 — Sovereign Open-Source Intelligence Engine & Orchestrator CLI
 Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform
 """
 
@@ -15,19 +15,25 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from engine.arsenal_runner import execute_arsenal_tool, get_arsenal_status  # noqa: E402
+from engine.case_store import get_case, list_cases  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     analyze_file_forensics,
+    classify_target,
     recon_domain,
     recon_email,
     recon_ip,
+    recon_phone,
     recon_username,
+    recon_wallet,
+    recon_wayback,
     run_unified_scan,
+    synthesize_dorks,
 )
 
 
 def _print_banner() -> None:
     print("╔══════════════════════════════════════════════════════════════════════╗")
-    print("║  ZOTH-OSINT v1.0 // SOVEREIGN OPEN-SOURCE INTELLIGENCE ORCHESTRATOR ║")
+    print("║  ZOTH-OSINT v2.0 // SOVEREIGN OPEN-SOURCE INTELLIGENCE ORCHESTRATOR ║")
     print("║  Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform      ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
 
@@ -35,15 +41,16 @@ def _print_banner() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="zoth-osint",
-        description="Zoth OSINT — Sovereign Multi-Pivot Reconnaissance & Open-Source OSINT Orchestrator",
+        description="Zoth OSINT v2.0 — Sovereign Multi-Pivot Reconnaissance & Open-Source OSINT Orchestrator",
     )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
     sub = parser.add_subparsers(dest="cmd")
 
-    # scan (auto-classifies target + synthesizes graph + Obsidian canvas)
-    p_scan = sub.add_parser("scan", help="Auto-classify target (domain/ip/username/email) and run full OSINT scan")
-    p_scan.add_argument("target", help="Target domain, IPv4, @username, or email")
+    # scan (auto-classifies target + synthesizes graph + Obsidian canvas + STIX 2.1 bundle)
+    p_scan = sub.add_parser("scan", help="Auto-classify target (domain/ip/username/email/wallet/phone) and run full OSINT scan")
+    p_scan.add_argument("target", help="Target domain, IPv4, @username, email, wallet address, or phone number")
     p_scan.add_argument("--canvas", help="Write Obsidian JSON Canvas (.canvas) to file path")
+    p_scan.add_argument("--stix", help="Write OASIS STIX 2.1 Cyber Threat Intelligence Bundle (.json) to file path")
     p_scan.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # username
@@ -52,7 +59,7 @@ def main() -> int:
     p_user.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # domain
-    p_dom = sub.add_parser("domain", help="Passive DNS, SPF/DMARC, TLS, crt.sh subdomains & Shodan InternetDB pivot")
+    p_dom = sub.add_parser("domain", help="Passive DNS, SPF/DMARC, TLS, crt.sh subdomains, Wayback CDX & Shodan InternetDB pivot")
     p_dom.add_argument("domain", help="Domain name (e.g. nullai.tech)")
     p_dom.add_argument("--json", action="store_true", help="Output raw JSON")
 
@@ -66,6 +73,31 @@ def main() -> int:
     p_em.add_argument("email", help="Email address")
     p_em.add_argument("--json", action="store_true", help="Output raw JSON")
 
+    # wallet
+    p_wal = sub.add_parser("wallet", help="Zero-key Blockchain RPC OSINT for Solana, Ethereum/EVM, and Bitcoin addresses")
+    p_wal.add_argument("address", help="Solana (Base58), Ethereum (0x...), or Bitcoin (bc1...) wallet address")
+    p_wal.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # phone
+    p_ph = sub.add_parser("phone", help="ITU-T E.164 normalization, NANPA area code geolocation & messaging pivot URLs")
+    p_ph.add_argument("number", help="Phone number (e.g. +1-757-555-0199)")
+    p_ph.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # wayback
+    p_wb = sub.add_parser("wayback", help="Wayback Machine CDX historical endpoint & sensitive path discovery")
+    p_wb.add_argument("domain", help="Domain name (e.g. nullai.tech)")
+    p_wb.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # dorks
+    p_dk = sub.add_parser("dorks", help="Synthesize 18 targeted Google, GitHub, Shodan & CT search queries for a target")
+    p_dk.add_argument("target", help="Target domain, handle, email, or IP")
+    p_dk.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # cases
+    p_cs = sub.add_parser("cases", help="List saved SQLite OSINT investigation cases (~/.zoth-osint/cases.db)")
+    p_cs.add_argument("--id", type=int, help="Fetch full JSON payload for a specific case ID")
+    p_cs.add_argument("--json", action="store_true", help="Output raw JSON")
+
     # exif / forensics
     p_exif = sub.add_parser("exif", help="Binary file forensics: SHA256/MD5, Shannon entropy, MIME & embedded URLs/emails")
     p_exif.add_argument("file", help="Path to local file")
@@ -77,8 +109,8 @@ def main() -> int:
     p_ars.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # run
-    p_run = sub.add_parser("run", help="Execute an installed open-source OSINT binary (sherlock, subfinder, dig, whois, nmap, internetdb)")
-    p_run.add_argument("tool_id", help="Tool ID (e.g. sherlock, subfinder, dig, whois, nmap, internetdb)")
+    p_run = sub.add_parser("run", help="Execute an installed open-source OSINT binary (sherlock, holehe, subfinder, dig, whois, nmap, httpx, internetdb)")
+    p_run.add_argument("tool_id", help="Tool ID (e.g. sherlock, holehe, subfinder, dig, whois, nmap, httpx, internetdb)")
     p_run.add_argument("target", help="Target string")
     p_run.add_argument("--json", action="store_true", help="Output raw JSON")
 
@@ -102,7 +134,7 @@ def main() -> int:
         from server import ZothOsintHandler, ThreadingHTTPServer
 
         srv = ThreadingHTTPServer((args.host, args.port), ZothOsintHandler)
-        print(f"[zoth-osint] Web Workstation running at http://{args.host}:{args.port}")
+        print(f"[zoth-osint v2.0] Web Workstation running at http://{args.host}:{args.port}")
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
@@ -114,16 +146,22 @@ def main() -> int:
         if args.canvas:
             with open(args.canvas, "w", encoding="utf-8") as f:
                 json.dump(res["obsidian_canvas"], f, indent=2)
+        if args.stix:
+            with open(args.stix, "w", encoding="utf-8") as f:
+                json.dump(res["stix_bundle"], f, indent=2)
         if want_json:
             print(json.dumps(res, indent=2))
         else:
             _print_banner()
-            print(f"[*] Target: {res['target']}  (Classified as: {res['type'].upper()})")
+            print(f"[*] Target: {res['target']}  (Classified as: {res['type'].upper()})  [Case #{res.get('case_id')}]")
             for finding in res.get("findings", []):
                 print(f"  + {finding}")
             print(f"  + Entity Graph: {len(res['graph']['nodes'])} nodes, {len(res['graph']['edges'])} edges")
+            print(f"  + STIX 2.1 Bundle: {len(res.get('stix_bundle', {}).get('objects', []))} SDO/SRO objects")
             if args.canvas:
                 print(f"  + Saved Obsidian Canvas to: {args.canvas}")
+            if args.stix:
+                print(f"  + Saved STIX 2.1 Bundle to: {args.stix}")
         return 0
 
     if args.cmd == "username":
@@ -134,6 +172,27 @@ def main() -> int:
         res = recon_ip(args.ip)
     elif args.cmd == "email":
         res = recon_email(args.email)
+    elif args.cmd == "wallet":
+        res = recon_wallet(args.address)
+    elif args.cmd == "phone":
+        res = recon_phone(args.number)
+    elif args.cmd == "wayback":
+        res = recon_wayback(args.domain)
+    elif args.cmd == "dorks":
+        t_type = classify_target(args.target)
+        res = {"target": args.target, "type": t_type, "dorks": synthesize_dorks(args.target, t_type)}
+    elif args.cmd == "cases":
+        if args.id:
+            res = get_case(args.id) or {"error": f"Case #{args.id} not found"}
+        else:
+            cases = list_cases(limit=25)
+            if not want_json:
+                _print_banner()
+                print(f"Saved OSINT Cases in ~/.zoth-osint/cases.db ({len(cases)} recent):\n")
+                for c in cases:
+                    print(f"  [#{c['id']:03d}] {c['timestamp']}  |  {c['target_type'].upper():8}  |  {c['target']:36}  ({c['node_count']} nodes, {c['edge_count']} edges)")
+                return 0
+            res = {"cases": cases}
     elif args.cmd == "exif":
         res = analyze_file_forensics(args.file)
     elif args.cmd == "arsenal":

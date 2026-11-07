@@ -1107,6 +1107,33 @@ zoth-osint cases</pre>
           pivotEl.appendChild(card);
         }
 
+        if (data.subdomain_takeovers) {
+          const to = data.subdomain_takeovers;
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          const isVuln = (to.vulnerable_count || 0) > 0;
+          const isDang = (to.dangling_count || 0) > 0;
+          card.style.borderColor = isVuln ? '#ef4444' : isDang ? '#f97316' : 'var(--accent-green)';
+          const badgeClass = isVuln ? 'badge' : isDang ? 'badge' : 'badge badge-green';
+          const badgeStyle = isVuln ? 'background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid #ef4444;' : isDang ? 'background:rgba(249,115,22,0.2);color:#f97316;border:1px solid #f97316;' : '';
+          const badgeText = isVuln ? `🚨 ${to.vulnerable_count} VULNERABLE` : isDang ? `⚠️ ${to.dangling_count} DANGLING` : '0 VULNERABLE';
+
+          let detailsHtml = '';
+          if (isVuln) {
+            detailsHtml = (to.vulnerable || []).map(v => `<div style="color:#ef4444;font-weight:600;">• ${v.subdomain} → ${v.service} (${v.cname})</div><div style="color:var(--text-secondary);font-size:0.68rem;">${v.fingerprint_matched || v.discussion || ''}</div>`).join('');
+          } else if (isDang) {
+            detailsHtml = (to.dangling || []).map(d => `<div style="color:#f97316;font-weight:600;">• ${d.subdomain} → NXDOMAIN (${d.cname})</div>`).join('');
+          } else {
+            detailsHtml = `<div style="color:var(--text-secondary);font-size:0.71rem;">Audited ${to.total_checked || 0} subdomains across ${to.signatures_count || 23} SaaS signatures.<br/>CNAME delegation hygiene verified safe.</div>`;
+          }
+
+          card.innerHTML = `
+            <div class="item-card-title"><span>Subdomain Takeover &amp; CNAME</span><span class="${badgeClass}" style="${badgeStyle}">${badgeText}</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;max-height:110px;overflow-y:auto;">${detailsHtml}</div>
+          `;
+          pivotEl.appendChild(card);
+        }
+
         if (data.http_stack && data.http_stack.status_code) {
           const card = document.createElement('div');
           card.className = 'item-card';
@@ -1191,6 +1218,52 @@ zoth-osint cases</pre>
             <a href="${data.messaging_pivots?.telegram || '#'}" target="_blank" rel="noopener noreferrer" style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--accent-purple);">Telegram Resolve ↗</a>
           </div>
         `;
+      }
+
+      const bi = data.breach_intel;
+      if (bi && (bi.breaches?.length > 0 || bi.pastes?.length > 0 || bi.pwned_passwords_k_anonymity?.pwned)) {
+        const breachCard = document.createElement('div');
+        breachCard.className = 'item-card';
+        breachCard.style.borderColor = bi.risk?.color || 'var(--accent-red)';
+        const pwn = bi.pwned_passwords_k_anonymity || {};
+        breachCard.innerHTML = `
+          <div class="item-card-title">
+            <span>Breach &amp; Leak Footprint</span>
+            <span class="badge" style="background:${bi.risk?.color || '#ef4444'};color:#05070a;font-weight:700;">${bi.risk?.level || 'ALERT'} (${bi.risk?.score || 0}/100)</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:4px;">
+            Breaches: <strong>${bi.breaches?.length || 0}</strong> · Pastes/Gists: <strong>${bi.pastes?.length || 0}</strong>
+            ${pwn.checked ? ` · HIBP: <span style="color:${pwn.pwned ? 'var(--accent-red)' : 'var(--accent-green)'}">${pwn.pwned ? (pwn.occurrences || 0).toLocaleString() + ' hits' : 'Clean'}</span>` : ''}
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.70rem;color:var(--text-secondary);max-height:80px;overflow-y:auto;">
+            ${(bi.breaches || []).slice(0, 6).map(b => `• ${b.name}${b.date ? ' (' + b.date + ')' : ''}`).join('<br/>') || 'No major public breaches'}
+          </div>
+        `;
+        pivotEl.appendChild(breachCard);
+      }
+
+      const ma = data.mitre_attack;
+      if (ma && (ma.techniques_detected || []).length > 0) {
+        const mitreCard = document.createElement('div');
+        mitreCard.className = 'item-card';
+        const scoreColor = ma.defensive_score >= 80 ? 'var(--accent-green)' : ma.defensive_score >= 55 ? 'var(--accent-gold)' : 'var(--accent-red)';
+        mitreCard.style.borderColor = scoreColor;
+        const topTechs = (ma.techniques_detected || []).slice(0, 4);
+        const topCm = (ma.countermeasures || [])[0];
+        mitreCard.innerHTML = `
+          <div class="item-card-title">
+            <span>MITRE ATT&amp;CK Matrix &amp; Hardening</span>
+            <span class="badge" style="background:${scoreColor}22;color:${scoreColor};border:1px solid ${scoreColor};font-weight:700;">SCORE ${ma.defensive_score || 0}/100</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:6px;">
+            ${(ma.techniques_detected || []).length} ATT&amp;CK Techniques Mapped · Risk: <strong style="color:${scoreColor}">${ma.risk_level || 'UNKNOWN'}</strong>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.70rem;max-height:85px;overflow-y:auto;margin-bottom:6px;">
+            ${topTechs.map(t => `<div style="color:var(--text-primary);"><span style="color:var(--accent-cyan);font-weight:600;">[${t.id}]</span> ${t.name} <span style="color:var(--text-secondary);font-size:0.65rem;">(${t.tactic})</span></div>`).join('')}
+          </div>
+          ${topCm ? `<div style="font-size:0.70rem;color:var(--accent-gold);border-top:1px solid var(--border-subtle);padding-top:4px;"><strong>⚡ Priority Mitigation:</strong> ${topCm.recommendation}</div>` : ''}
+        `;
+        pivotEl.appendChild(mitreCard);
       }
 
       initGraph(data.graph || { nodes: [], edges: [] }, data.case_id);
@@ -1407,9 +1480,9 @@ zoth-osint cases</pre>
           "Concurrent handle enumeration: Probing GitHub, GitLab, PyPI, npm, DockerHub, and HackerNews in parallel.",
           "GitHub Deep Artifacts: Extracting raw SSH public keys (github.com/<user>.keys) to fingerprint hardware types.",
           "Commit Author Attribution: Unmasking real developer emails from public git commit history via GitHub Events API.",
-          "Gravatar MD5/SHA256 hash collision and OpenPGP universal keyserver queries."
+          "Zero-Key Breach & Leak Intelligence: HIBP SHA-1 k-anonymity (zero-knowledge) & public paste dump reconnaissance."
         ],
-        command: "zoth-osint username 1nc0gn30 --json"
+        command: "zoth-osint breach 1nc0gn30 --json"
       },
       mod3: {
         title: "03 // Infrastructure Recon, DNS-over-HTTPS, BGP & Port Telemetry",
@@ -1429,9 +1502,9 @@ zoth-osint cases</pre>
           "MurmurHash3 (mmh3) Theory: Computing 32-bit signed MurmurHash3 on RFC 2045 Base64 favicon bytes.",
           "Shodan & Censys Favicon Queries: Searching http.favicon.hash:<hash> to reveal unprotected staging servers.",
           "Certificate Transparency (CT) Logs: Querying crt.sh to uncover shadow subdomains and dev environments.",
-          "Passive HTTP Header Security: Grading HSTS, CSP, and X-Frame-Options on a 0-100 posture scale."
+          "Subdomain Takeover & Dangling DNS: Auditing CNAME records across 23+ SaaS signatures (GitHub Pages, S3, Heroku, Netlify, Fastly)."
         ],
-        command: "zoth-osint favicon github.com"
+        command: "zoth-osint takeover nullai.tech"
       },
       mod5: {
         title: "05 // Cryptographic Ledger OSINT: Solana, EVM & Bitcoin Forensics",
@@ -1471,11 +1544,11 @@ zoth-osint cases</pre>
         summary: "Structuring raw investigation discoveries into standardized cyber threat intelligence objects and interactive graphs.",
         topics: [
           "OASIS STIX 2.1 Specification: Mapping entities to SDOs (ipv4-addr, domain-name, vulnerability, identity) and SROs.",
+          "MITRE ATT&CK Matrix Mapping: Synthesizing formal ATT&CK techniques (v14.1) and defensive countermeasures.",
           "Deterministic UUID5 Generation: Creating persistent global identifiers across investigations.",
-          "Obsidian JSON Canvas (.canvas): Exporting spatial link nodes and color-coded relationship boards.",
-          "Gephi / Cytoscape GEXF 1.3 XML: Enabling large-scale network force layouts and clustering algorithms."
+          "Obsidian JSON Canvas (.canvas) & GEXF 1.3: Exporting spatial link nodes and network clustering graphs."
         ],
-        command: "zoth-osint scan nullai.tech --stix /tmp/intel.stix.json --canvas /tmp/intel.canvas"
+        command: "zoth-osint mitre nullai.tech --stix /tmp/intel.stix.json"
       },
       mod9: {
         title: "09 // Autonomous Tool Orchestration: 32 Open-Source Arsenal Tools",

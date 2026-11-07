@@ -9,6 +9,8 @@ Serves the Zoth OSINT Web Workstation on http://127.0.0.1:8148 and exposes:
   POST /api/arsenal/run
   POST /api/forensics
   GET  /api/wayback?domain=<domain>
+  GET  /api/mitre?target=<target>
+  POST /api/mitre
   GET  /api/dorks?target=<target>
   GET  /api/cases
   GET  /api/cases/<id>
@@ -29,7 +31,10 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from engine.arsenal_runner import execute_arsenal_tool, get_arsenal_status  # noqa: E402
+from engine.breach_intel import recon_breaches_and_pastes  # noqa: E402
 from engine.case_store import correlate_cases, get_case, list_cases  # noqa: E402
+from engine.mitre_attack import map_mitre_attack  # noqa: E402
+from engine.takeover import check_subdomain_takeovers  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     analyze_bytes_forensics,
     classify_target,
@@ -78,6 +83,7 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
                     "arsenal_total": arsenal["total_tools"],
                     "arsenal_installed": arsenal["installed_or_builtin"],
                     "saved_cases": len(list_cases(limit=50)),
+                    "breach_engine": "active",
                 }
             )
             return
@@ -85,6 +91,12 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         if path == "/api/scan":
             target = (qs.get("target") or ["1nc0gn30"])[0]
             self._send_json(run_unified_scan(target))
+            return
+
+        if path == "/api/breach":
+            target = (qs.get("target") or ["test@example.com"])[0]
+            qtype = (qs.get("type") or ["auto"])[0]
+            self._send_json(recon_breaches_and_pastes(target, query_type=qtype))
             return
 
         if path == "/api/arsenal":
@@ -95,6 +107,16 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         if path == "/api/wayback":
             domain = (qs.get("domain") or ["nullai.tech"])[0]
             self._send_json(recon_wayback(domain))
+            return
+
+        if path in ("/api/takeover", "/api/takeovers"):
+            domain = (qs.get("domain") or qs.get("target") or ["nullai.tech"])[0]
+            raw_subs = qs.get("subdomains")
+            if raw_subs:
+                subs = [s.strip() for s in raw_subs[0].split(",") if s.strip()]
+                self._send_json(check_subdomain_takeovers(subdomains=subs))
+            else:
+                self._send_json(check_subdomain_takeovers(subdomains=[], target_domain=domain))
             return
 
         if path == "/api/favicon":
@@ -120,6 +142,13 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         if path == "/api/asn":
             asn = (qs.get("asn") or ["13335"])[0]
             self._send_json(recon_asn_bgp(asn))
+            return
+
+        if path == "/api/mitre":
+            target = (qs.get("target") or ["nullai.tech"])[0]
+            scan_res = run_unified_scan(target)
+            mitre_data = scan_res.get("mitre_attack") or map_mitre_attack(scan_res.get("findings", []), scan_res)
+            self._send_json(mitre_data)
             return
 
         if path == "/api/correlate":
@@ -182,6 +211,25 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         if path == "/api/scan":
             target = str(payload.get("target") or "1nc0gn30")
             self._send_json(run_unified_scan(target))
+            return
+
+        if path == "/api/breach":
+            target = str(payload.get("target") or "test@example.com")
+            qtype = str(payload.get("type") or "auto")
+            self._send_json(recon_breaches_and_pastes(target, query_type=qtype))
+            return
+
+        if path == "/api/mitre":
+            target = str(payload.get("target") or "nullai.tech")
+            scan_res = run_unified_scan(target)
+            mitre_data = scan_res.get("mitre_attack") or map_mitre_attack(scan_res.get("findings", []), scan_res)
+            self._send_json(mitre_data)
+            return
+
+        if path in ("/api/takeover", "/api/takeovers"):
+            subs = payload.get("subdomains") or []
+            domain = payload.get("domain") or payload.get("target")
+            self._send_json(check_subdomain_takeovers(subdomains=subs, target_domain=domain))
             return
 
         if path == "/api/arsenal/run":

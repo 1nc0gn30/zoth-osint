@@ -19,6 +19,9 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
+from engine.takeover import check_subdomain_takeovers  # noqa: E402
+from engine.breach_intel import recon_breaches_and_pastes  # noqa: E402
+from engine.mitre_attack import map_mitre_attack  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     recon_favicon_mmh3,
     recon_new_age_identity,
@@ -86,6 +89,40 @@ MCP_TOOLS = [
             "required": ["domain"],
         },
     },
+    {
+        "name": "osint_subdomain_takeovers",
+        "description": "Perform an active/passive DNS and Subdomain takeover audit on a domain or list of subdomains, checking CNAME records for dangling pointers and 23+ SaaS fingerprints (GitHub Pages, AWS S3, Heroku, Netlify, Fastly, Ghost, Surge, etc.).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Target domain (e.g. nullai.tech) or comma-separated subdomains"},
+            },
+            "required": ["target"],
+        },
+    },
+    {
+        "name": "osint_breach",
+        "description": "Zero-key breach, leak archive & paste intelligence search. Checks XposedOrNot public breach database, LeakCheck index, HIBP SHA-1 k-anonymity (zero knowledge), Rentry/Dpaste direct probes, and GitHub commit/gist leak mentions.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Target email, username, or credential query"},
+                "type": {"type": "string", "description": "Target query type: email, username, or auto", "enum": ["auto", "email", "username"]},
+            },
+            "required": ["target"],
+        },
+    },
+    {
+        "name": "osint_mitre",
+        "description": "Map multi-pivot reconnaissance telemetry (open ports, CVEs, missing HTTP headers, SPF/DMARC posture, exposed files) to formal MITRE ATT&CK Enterprise Matrix techniques (v14.1) and synthesize prioritized tactical countermeasures.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Target domain, IPv4, username, email, or wallet"},
+            },
+            "required": ["target"],
+        },
+    },
 ]
 
 
@@ -123,6 +160,23 @@ def handle_rpc(req: Dict[str, Any]) -> Dict[str, Any]:
             res = recon_wallet(str(args.get("address", "")))
         elif name == "osint_wayback":
             res = recon_wayback(str(args.get("domain", "nullai.tech")))
+        elif name == "osint_subdomain_takeovers":
+            target = str(args.get("target", "nullai.tech")).strip()
+            if "," in target:
+                subs = [s.strip() for s in target.split(",") if s.strip()]
+                res = check_subdomain_takeovers(subdomains=subs)
+            elif target.count(".") <= 1 and not target.startswith("www."):
+                res = check_subdomain_takeovers(subdomains=[], target_domain=target)
+            else:
+                res = check_subdomain_takeovers(subdomains=[target])
+        elif name == "osint_breach":
+            target = str(args.get("target", "test@example.com")).strip()
+            qtype = str(args.get("type", "auto")).strip()
+            res = recon_breaches_and_pastes(target, query_type=qtype)
+        elif name == "osint_mitre":
+            target = str(args.get("target", "nullai.tech")).strip()
+            scan_res = run_unified_scan(target)
+            res = scan_res.get("mitre_attack") or map_mitre_attack(scan_res.get("findings", []), scan_res)
         else:
             return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Unknown tool: {name}"}}
 

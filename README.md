@@ -30,6 +30,22 @@
    - Double-click any node on the 60 FPS Entity Link Graph to immediately pivot and scan that entity.
    - Automatically persists every scan in `~/.zoth-osint/cases.db` and exports to **Obsidian JSON Canvas (`.canvas`)**, **OASIS STIX 2.1 Cyber Threat Intelligence Bundles (`.json`)**, and **Markdown Dossiers (`.md`)**.
 
+5. **Zero-Key Breach & Leak Intelligence Engine (`engine/breach_intel.py`)**:
+   - **Mathematical k-Anonymity Credential Check**: Computes SHA-1 hash prefixes (first 5 characters) against Have I Been Pwned (HIBP) Pwned Passwords range endpoint with zero credential disclosure over the wire.
+   - **XposedOrNot & LeakCheck Multi-Index Correlation**: Queries verified breach archives, exposed PII attributes (passwords, SSNs, phone numbers), and historical paste dumps without requiring third-party API keys.
+   - **Public Paste & Code Mentions Prober**: Direct endpoint inspection across Rentry.co, Dpaste.org, GitHub user Gists, and public GitHub repository commit leaks.
+   - **Deterministic Threat Risk Scorer (0-100)**: Synthesizes risk ratings (`CLEAN`, `LOW`, `MODERATE`, `HIGH`, `CRITICAL`) with prioritized vulnerability evidence.
+
+6. **MITRE ATT&CK Enterprise Matrix & Defensive Countermeasures (`engine/mitre_attack.py`)**:
+   - Automatically maps all discovered reconnaissance telemetry (open ports like 22 SSH, 80/443 HTTP, 3389 RDP, 445 SMB; exposed `.env` / `.git` secrets; missing DMARC/SPF; git commit leaks; crypto wallets; cloud metadata) directly to formal **MITRE ATT&CK Enterprise Matrix techniques** (e.g. `T1592`, `T1595`, `T1589`, `T1596`, `T1190`, `T1133`, `T1566`, `T1552.001`, `T1526`, `T1078`, `T1496`).
+   - Computes an automated **Defensive Hardening Score (0-100)** and synthesizes prioritized tactical countermeasures (`P1` Critical through `P3` Medium) with concrete remediation actions (strict DMARC `p=reject`, SSH key-only auth & Fail2ban, secret rotation, Cloudflare WAF origin cloaking, IMDSv2 token enforcement).
+   - Enriches all generated **OASIS STIX 2.1 Bundles** with standard SDO `attack-pattern` objects, `course-of-action` mitigation objects, and `targets`/`mitigates` relationship links.
+
+7. **Active/Passive Subdomain Takeover & Dangling DNS Engine (`engine/takeover.py`)**:
+   - Audits CNAME delegation records and queries Google DNS-over-HTTPS (DoH) with zero pip dependencies.
+   - Evaluates dangling pointers against **23+ vulnerable SaaS fingerprints**: GitHub Pages, AWS S3 (`<Code>NoSuchBucket</Code>`), Heroku (`No such app`), Netlify (`Not Found`), Fastly (`Fastly error: unknown domain`), Ghost, Surge, Shopify, Vercel, Bitbucket, Zendesk, HubSpot, WordPress, Tumblr, Unbounce, Azure App Service, Fly.io, Pantheon, ReadMe, Help Scout, Cargo, Render, and Firebase Hosting.
+   - Integrated into every domain recon scan and exposed via CLI (`zoth-osint takeover <domain>`), REST API (`/api/takeover`), and MCP tool (`osint_subdomain_takeovers`).
+
 ---
 
 ## ZothOS CLI & MCP Commands
@@ -37,6 +53,19 @@
 ```bash
 # Auto-classify target, run full multi-pivot scan & export Obsidian .canvas + STIX 2.1 CTI bundle
 zoth-osint scan 1nc0gn30 --canvas /tmp/1nc0gn30.canvas --stix /tmp/1nc0gn30.stix.json
+
+# Zero-key breach, leak archive & pastebin/gist reconnaissance with HIBP k-anonymity
+zoth-osint breach test@example.com
+zoth-osint breach 1nc0gn30 --json
+
+# Map reconnaissance findings to MITRE ATT&CK Enterprise Matrix & tactical countermeasures
+zoth-osint mitre nullai.tech
+zoth-osint mitre 1.1.1.1 --stix /tmp/mitre_bundle.stix.json
+zoth-osint mitre 1nc0gn30 --json
+
+# Subdomain takeover and dangling CNAME audit across 23+ SaaS signatures
+zoth-osint takeover nullai.tech
+zoth-osint takeover sub1.example.com,sub2.example.com --json
 
 # Compute Shodan/Censys 32-bit signed Favicon MurmurHash3 (mmh3) & SHA256
 zoth-osint favicon github.com

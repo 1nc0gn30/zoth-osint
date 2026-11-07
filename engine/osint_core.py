@@ -30,7 +30,10 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+from engine.breach_intel import recon_breaches_and_pastes
 from engine.case_store import export_gexf_xml, export_stix_bundle, save_case
+from engine.mitre_attack import map_mitre_attack
+from engine.takeover import TAKEOVER_SIGNATURES, audit_single_subdomain, check_subdomain_takeovers
 
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) ZothOSINT/3.0 (+https://nullai.tech)"
 
@@ -596,6 +599,7 @@ def recon_domain(domain_input: str) -> Dict[str, Any]:
         "email_security": {"spf": None, "dmarc": None, "grade": "C"},
         "tls": {},
         "subdomains": [],
+        "subdomain_takeovers": {},
         "wayback": {},
         "ip_intel": [],
         "findings": [],
@@ -666,18 +670,20 @@ def recon_domain(domain_input: str) -> Dict[str, Any]:
     except Exception:
         result["tls"] = {}
 
-    # Wayback Machine CDX, Favicon MMH3, RDAP, Well-Known & HTTP Tech-Stack discovery in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex2:
+    # Wayback Machine CDX, Favicon MMH3, RDAP, Well-Known, HTTP Tech-Stack & Subdomain Takeovers in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex2:
         f_wb = ex2.submit(recon_wayback, domain, 30)
         f_fav = ex2.submit(recon_favicon_mmh3, domain)
         f_rdap = ex2.submit(recon_rdap, domain, False)
         f_wk = ex2.submit(recon_well_known, domain)
         f_http = ex2.submit(recon_http_stack, domain)
+        f_to = ex2.submit(check_subdomain_takeovers, result["subdomains"], domain, 8, 3.0)
         result["wayback"] = f_wb.result()
         result["favicon"] = f_fav.result()
         result["rdap"] = f_rdap.result()
         result["well_known"] = f_wk.result()
         result["http_stack"] = f_http.result()
+        result["subdomain_takeovers"] = f_to.result()
 
     a_records = [ip for ip in result["dns"].get("A", []) if re.match(r"^(?:\d{1,3}\.){3}\d{1,3}$", ip)]
     for ip in a_records[:2]:
@@ -700,6 +706,22 @@ def recon_domain(domain_input: str) -> Dict[str, Any]:
     result["findings"].append(
         f"Email spoof defense posture: Grade {result['email_security']['grade']} (SPF: {'Yes' if spf_rec else 'No'}, DMARC: {'Yes' if result['email_security']['dmarc'] else 'No'})."
     )
+
+    tk_data = result.get("subdomain_takeovers") or {}
+    if tk_data.get("vulnerable"):
+        for v in tk_data["vulnerable"][:3]:
+            result["findings"].append(
+                f"🚨 SUBDOMAIN TAKEOVER ALERT: Subdomain '{v['subdomain']}' -> CNAME '{v.get('cname')}' matches unclaimed {v['service']} ({v.get('fingerprint_matched') or v.get('reason')})."
+            )
+    elif tk_data.get("dangling"):
+        for d in tk_data["dangling"][:2]:
+            result["findings"].append(
+                f"⚠️ DANGLING CNAME DETECTED: Subdomain '{d['subdomain']}' points to non-existent target '{d.get('cname')}' (NXDOMAIN)."
+            )
+    else:
+        result["findings"].append(
+            f"Subdomain Takeover Hygiene: Audited {tk_data.get('total_checked', 0)} subdomains across {tk_data.get('signatures_count', len(TAKEOVER_SIGNATURES))} SaaS signatures — 0 dangling CNAME pointers detected."
+        )
 
     return result
 
@@ -916,6 +938,14 @@ def recon_username(username_input: str) -> Dict[str, Any]:
 
     result["new_age_identity"] = recon_new_age_identity(username)
 
+    try:
+        b_intel = recon_breaches_and_pastes(username, "username")
+        result["breach_intel"] = b_intel
+        for bf in b_intel.get("findings", [])[1:]:
+            result["findings"].append(f"Breach/Paste Intel: {bf}")
+    except Exception:
+        result["breach_intel"] = {}
+
     result["findings"].append(f"Confirmed active presence on {len(found)}/{len(PLATFORMS)} high-signal platforms ({', '.join(p['platform'] for p in found)}).")
     if result["github_deep_intel"]["ssh_keys"]:
         result["findings"].append(f"Extracted {len(result['github_deep_intel']['ssh_keys'])} public SSH authentication keys from GitHub endpoint.")
@@ -985,6 +1015,14 @@ def recon_email(email_input: str) -> Dict[str, Any]:
     result["findings"].append(f"Gravatar profile: {'ACTIVE' if result['gravatar']['exists'] else 'None'} | OpenPGP Public Key: {'FOUND' if result['pgp_keyserver']['found'] else 'None'}.")
     if result["github_accounts"]:
         result["findings"].append(f"Linked to GitHub account(s): {', '.join(a['login'] for a in result['github_accounts'])}.")
+
+    try:
+        b_intel = recon_breaches_and_pastes(email, "email")
+        result["breach_intel"] = b_intel
+        for bf in b_intel.get("findings", []):
+            result["findings"].append(f"Breach/Paste Intel: {bf}")
+    except Exception:
+        result["breach_intel"] = {}
 
     return result
 
@@ -1255,8 +1293,27 @@ def build_entity_graph(scan_result: Dict[str, Any]) -> Dict[str, Any]:
                 add_node(f"{ip_id}_p{p}", f":{p}/TCP", "PORT", "#ffb800", ip_id, "OPEN", pivot=ip)
             for v in ip_obj.get("internetdb", {}).get("vulns", [])[:5]:
                 add_node(f"{ip_id}_{v}", v, "CVE", "#ef4444", ip_id, "VULN", pivot=ip)
+        takeover_data = scan_result.get("subdomain_takeovers") or {}
+        vuln_map = {v["subdomain"]: v for v in takeover_data.get("vulnerable", [])}
+        dangling_map = {d["subdomain"]: d for d in takeover_data.get("dangling", [])}
+
         for i, sub in enumerate(scan_result.get("subdomains", [])[:12]):
-            add_node(f"sub_{i}", sub, "SUBDOMAIN", "#a855f7", "root", "CT LOG", pivot=sub)
+            if sub in vuln_map:
+                v = vuln_map[sub]
+                add_node(f"sub_{i}", sub, "SUBDOMAIN", "#ef4444", "root", "VULN CNAME", pivot=sub)
+                add_node(f"takeover_{i}", f"TAKEOVER: {v['service']}", "VULN", "#ef4444", f"sub_{i}", "EXPLOITABLE", pivot=v.get("cname", sub))
+            elif sub in dangling_map:
+                d = dangling_map[sub]
+                add_node(f"sub_{i}", sub, "SUBDOMAIN", "#f97316", "root", "DANGLING", pivot=sub)
+                add_node(f"dangling_{i}", f"DANGLING: {d.get('cname', 'NXDOMAIN')}", "DANGLING_DNS", "#f97316", f"sub_{i}", "NXDOMAIN", pivot=d.get("cname", sub))
+            else:
+                add_node(f"sub_{i}", sub, "SUBDOMAIN", "#a855f7", "root", "CT LOG", pivot=sub)
+
+        for j, (v_sub, v_obj) in enumerate(vuln_map.items()):
+            if not any(n["label"] == v_sub for n in nodes):
+                nid = f"vuln_sub_{j}"
+                add_node(nid, v_sub, "SUBDOMAIN", "#ef4444", "root", "VULN CNAME", pivot=v_sub)
+                add_node(f"vuln_tk_{j}", f"TAKEOVER: {v_obj['service']}", "VULN", "#ef4444", nid, "EXPLOITABLE", pivot=v_obj.get("cname", v_sub))
         for i, mx in enumerate(scan_result.get("dns", {}).get("MX", [])[:4]):
             clean_mx = mx.split()[-1].rstrip(".")
             add_node(f"mx_{i}", clean_mx, "MX", "#38bdf8", "root", "MAIL", pivot=clean_mx)
@@ -1326,6 +1383,22 @@ def build_entity_graph(scan_result: Dict[str, Any]) -> Dict[str, Any]:
         add_node("wa", "WhatsApp Pivot", "MESSAGING", "#00d5ff", "root", "WA.ME")
         add_node("tg", "Telegram Pivot", "MESSAGING", "#a855f7", "root", "T.ME")
 
+    # Overlay breach and paste intelligence nodes if present
+    bi = scan_result.get("breach_intel") or (scan_result if ttype == "breach" else {})
+    if bi:
+        pwn = bi.get("pwned_passwords_k_anonymity") or {}
+        if pwn.get("pwned"):
+            add_node("hibp_k", f"HIBP ({pwn.get('occurrences', 0):,} hits)", "INCIDENT", "#e11d48", "root", "SHA1 PWNED")
+        for i, b in enumerate(bi.get("breaches", [])[:6]):
+            bname = str(b.get("name") or f"Breach {i+1}")
+            add_node(f"br_{i}", bname, "BREACH", "#ef4444", "root", "EXPOSED IN", pivot=b.get("domain") or bname)
+        for i, p in enumerate(bi.get("pastes", [])[:4]):
+            ptitle = str(p.get("title") or f"Paste {i+1}")[:24]
+            add_node(f"pst_{i}", ptitle, "PASTE", "#f97316", "root", "PASTE DUMP", pivot=p.get("url") or "")
+        for i, c in enumerate(bi.get("commit_mentions", [])[:3]):
+            repo = str(c.get("repo") or f"Commit {i+1}")
+            add_node(f"cmt_{i}", repo, "COMMIT", "#a855f7", "root", "CODE MENTION", pivot=c.get("url") or "")
+
     return {"nodes": nodes, "edges": edges}
 
 
@@ -1386,12 +1459,15 @@ def run_unified_scan(target: str, persist: bool = True) -> Dict[str, Any]:
         data = recon_wallet(target)
     elif ttype == "phone":
         data = recon_phone(target)
+    elif ttype == "breach":
+        data = recon_breaches_and_pastes(target, "auto")
     else:
         data = recon_username(target)
 
     graph = build_entity_graph(data)
     data["graph"] = graph
     data["dorks"] = synthesize_dorks(data.get("target", target), ttype)
+    data["mitre_attack"] = map_mitre_attack(data.get("findings", []), data)
     data["obsidian_canvas"] = export_obsidian_canvas(graph, title=f"Zoth OSINT: {data.get('target')}")
     data["stix_bundle"] = export_stix_bundle(data)
     data["gexf_xml"] = export_gexf_xml(graph, title=f"Zoth OSINT: {data.get('target')}")

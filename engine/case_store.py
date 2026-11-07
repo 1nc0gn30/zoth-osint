@@ -13,6 +13,8 @@ import sqlite3
 import uuid
 from typing import Any, Dict, List, Optional
 
+from engine.mitre_attack import build_mitre_stix_objects, map_mitre_attack
+
 DEFAULT_DB_DIR = os.path.expanduser("~/.zoth-osint")
 DEFAULT_DB_PATH = os.path.join(DEFAULT_DB_DIR, "cases.db")
 
@@ -128,10 +130,45 @@ def export_stix_bundle(scan_data: Dict[str, Any]) -> Dict[str, Any]:
             stix_type = "domain-name"
             stix_id = f"{stix_type}--{det_uuid}"
             obj = {"type": stix_type, "spec_version": "2.1", "id": stix_id, "value": label}
-        elif ntype == "CVE":
+        elif ntype in ("CVE", "VULN", "TAKEOVER"):
             stix_type = "vulnerability"
             stix_id = f"{stix_type}--{det_uuid}"
             obj = {"type": stix_type, "spec_version": "2.1", "id": stix_id, "created": now, "modified": now, "name": label}
+        elif ntype in ("BREACH", "LEAK"):
+            stix_type = "incident"
+            stix_id = f"{stix_type}--{det_uuid}"
+            obj = {
+                "type": stix_type,
+                "spec_version": "2.1",
+                "id": stix_id,
+                "created": now,
+                "modified": now,
+                "name": f"Breach Exposure: {label}",
+                "description": f"Compromised credential / leak archive entry: {label}",
+            }
+        elif ntype in ("PASTE", "DUMP", "GIST"):
+            stix_type = "indicator"
+            stix_id = f"{stix_type}--{det_uuid}"
+            obj = {
+                "type": stix_type,
+                "spec_version": "2.1",
+                "id": stix_id,
+                "created": now,
+                "modified": now,
+                "name": f"Paste Record: {label}",
+                "indicator_types": ["compromised-credentials"],
+                "pattern": f"[{'email-addr' if '@' in label else 'user-account'}:value = '{label}']",
+                "pattern_type": "stix",
+                "valid_from": now,
+            }
+        elif ntype == "EMAIL":
+            stix_type = "email-addr"
+            stix_id = f"{stix_type}--{det_uuid}"
+            obj = {"type": stix_type, "spec_version": "2.1", "id": stix_id, "value": label}
+        elif ntype == "PROFILE":
+            stix_type = "user-account"
+            stix_id = f"{stix_type}--{det_uuid}"
+            obj = {"type": stix_type, "spec_version": "2.1", "id": stix_id, "account_login": label}
         else:
             stix_type = "grouping"
             stix_id = f"{stix_type}--{det_uuid}"
@@ -166,6 +203,21 @@ def export_stix_bundle(scan_data: Dict[str, Any]) -> Dict[str, Any]:
                     "target_ref": dst,
                 }
             )
+
+    # Embed MITRE ATT&CK Enterprise Matrix Objects (SDO type 'attack-pattern', 'course-of-action', and SRO 'relationship')
+    mitre_data = scan_data.get("mitre_attack")
+    if not mitre_data:
+        try:
+            mitre_data = map_mitre_attack(scan_data)
+        except Exception:
+            mitre_data = None
+
+    if mitre_data:
+        try:
+            mitre_stix_objs = build_mitre_stix_objects(mitre_data, identity_id, now_iso=now)
+            objects.extend(mitre_stix_objs)
+        except Exception:
+            pass
 
     bundle_uuid = hashlib.md5(f"{target}:{now}".encode("utf-8")).hexdigest()
     return {
@@ -259,10 +311,15 @@ def correlate_payloads(payloads: List[Dict[str, Any]]) -> Dict[str, Any]:
                 merged_edges.append({"from": u, "to": v, "label": str(e.get("label", ""))})
 
     overlaps = []
+    breach_overlaps = []
     for canon_key, seen_targets in occurrence_map.items():
         if len(seen_targets) > 1:
             node_obj = merged_nodes[canon_key]
-            node_obj["color"] = "#ffb800"  # Highlight shared overlap nodes in gold
+            if node_obj["type"] in ("BREACH", "LEAK", "PASTE", "INCIDENT"):
+                node_obj["color"] = "#f43f5e"  # Highlight shared breach leaks in crimson
+                breach_overlaps.append(node_obj["label"])
+            else:
+                node_obj["color"] = "#ffb800"  # Highlight shared overlap nodes in gold
             overlaps.append(
                 {
                     "entity": node_obj["label"],
@@ -274,6 +331,8 @@ def correlate_payloads(payloads: List[Dict[str, Any]]) -> Dict[str, Any]:
     findings = [
         f"Merged {len(payloads)} investigations ({', '.join(targets)}) into a Unified Supergraph ({len(merged_nodes)} unique entities, {len(merged_edges)} links).",
     ]
+    if breach_overlaps:
+        findings.append(f"BREACH CORRELATION ALERT: Detected {len(breach_overlaps)} shared compromised breach dumps across investigated targets ({', '.join(breach_overlaps[:6])}).")
     if overlaps:
         findings.append(f"SHARED PIVOT ALERT: Detected {len(overlaps)} overlapping entities shared across multiple targets ({', '.join(o['entity'] for o in overlaps[:6])}).")
     else:

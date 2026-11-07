@@ -15,7 +15,10 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from engine.arsenal_runner import execute_arsenal_tool, get_arsenal_status  # noqa: E402
+from engine.breach_intel import recon_breaches_and_pastes  # noqa: E402
 from engine.case_store import correlate_cases, correlate_payloads, get_case, list_cases  # noqa: E402
+from engine.mitre_attack import map_mitre_attack  # noqa: E402
+from engine.takeover import check_subdomain_takeovers  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     analyze_file_forensics,
     classify_target,
@@ -78,6 +81,12 @@ def main() -> int:
     p_em.add_argument("email", help="Email address")
     p_em.add_argument("--json", action="store_true", help="Output raw JSON")
 
+    # breach
+    p_br = sub.add_parser("breach", help="Zero-key breach, leak archive & pastebin/gist reconnaissance")
+    p_br.add_argument("target", help="Target email, username, or keyword")
+    p_br.add_argument("--type", choices=["email", "username", "auto"], default="auto", help="Override query target type")
+    p_br.add_argument("--json", action="store_true", help="Output raw JSON")
+
     # wallet
     p_wal = sub.add_parser("wallet", help="Zero-key Blockchain RPC OSINT for Solana, Ethereum/EVM, and Bitcoin addresses")
     p_wal.add_argument("address", help="Solana (Base58), Ethereum (0x...), or Bitcoin (bc1...) wallet address")
@@ -113,6 +122,11 @@ def main() -> int:
     p_tc.add_argument("domain", help="Domain name (e.g. nullai.tech)")
     p_tc.add_argument("--json", action="store_true", help="Output raw JSON")
 
+    # takeover
+    p_to = sub.add_parser("takeover", help="Active/passive DNS CNAME and Subdomain takeover audit across 23+ SaaS signatures")
+    p_to.add_argument("target", help="Domain or subdomain(s) to audit (e.g. nullai.tech, or sub1.example.com,sub2.example.com)")
+    p_to.add_argument("--json", action="store_true", help="Output raw JSON")
+
     # asn
     p_as = sub.add_parser("asn", help="Query RIPE Stat BGP API for Autonomous System holder & announced CIDR prefixes")
     p_as.add_argument("asn", help="ASN number (e.g. AS13335 or 13335)")
@@ -131,6 +145,12 @@ def main() -> int:
     p_dk = sub.add_parser("dorks", help="Synthesize 18 targeted Google, GitHub, Shodan & CT search queries for a target")
     p_dk.add_argument("target", help="Target domain, handle, email, or IP")
     p_dk.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # mitre
+    p_mitre = sub.add_parser("mitre", help="Map target recon telemetry to MITRE ATT&CK Enterprise Matrix & tactical countermeasures")
+    p_mitre.add_argument("target", help="Target domain, IPv4, username, email, or wallet")
+    p_mitre.add_argument("--stix", help="Write enriched OASIS STIX 2.1 Threat Bundle to file path")
+    p_mitre.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # cases
     p_cs = sub.add_parser("cases", help="List saved SQLite OSINT investigation cases (~/.zoth-osint/cases.db)")
@@ -211,6 +231,38 @@ def main() -> int:
         res = recon_ip(args.ip)
     elif args.cmd == "email":
         res = recon_email(args.email)
+    elif args.cmd == "breach":
+        q_type = args.type if args.type != "auto" else classify_target(args.target)
+        res = recon_breaches_and_pastes(args.target, query_type=q_type)
+        if want_json:
+            print(json.dumps(res, indent=2))
+        else:
+            _print_banner()
+            print(f"[*] Breach & Leak Reconnaissance: {res['target']} ({res.get('query_type', 'auto').upper()})")
+            risk = res.get("risk", {})
+            print(f"[*] Threat Rating: {risk.get('level', 'CLEAN')} ({risk.get('score', 0)}/100)  |  Breaches: {len(res.get('breaches', []))}  |  Pastes/Gists: {len(res.get('pastes', []))}")
+            pwn = res.get("pwned_passwords_k_anonymity") or {}
+            if pwn.get("checked"):
+                status_str = f"EXPOSED ({pwn['occurrences']:,} occurrences)" if pwn.get("pwned") else "CLEAN (0 occurrences)"
+                print(f"[*] HIBP SHA-1 k-Anonymity [{pwn.get('hash_prefix', '?????')}***]: {status_str}")
+            print("\nFindings:")
+            for f in res.get("findings", []):
+                print(f"  + {f}")
+            if res.get("breaches"):
+                print("\nDiscovered Public Breaches (Top 10):")
+                for b in res["breaches"][:10]:
+                    d_str = f" ({b.get('date')})" if b.get('date') else ""
+                    classes = ", ".join(b.get("data_classes", [])[:4])
+                    print(f"  • {b.get('name')}{d_str} — {b.get('industry', 'Leak')} [{classes or 'Account Data'}]")
+            if res.get("pastes"):
+                print("\nDiscovered Pastes / Gists:")
+                for p in res["pastes"][:10]:
+                    print(f"  • [{p.get('source')}] {p.get('title')} -> {p.get('url')}")
+            if res.get("commit_mentions"):
+                print("\nDiscovered Public GitHub Commit Leaks:")
+                for c in res["commit_mentions"][:5]:
+                    print(f"  • [{c.get('repo')}] {c.get('message')} ({c.get('author')})")
+        return 0
     elif args.cmd == "wallet":
         res = recon_wallet(args.address)
     elif args.cmd == "phone":
@@ -225,6 +277,39 @@ def main() -> int:
         res = recon_rdap(args.target, is_ip=(classify_target(args.target) == "ip"))
     elif args.cmd == "tech":
         res = recon_http_stack(args.domain)
+    elif args.cmd == "takeover":
+        target = args.target.strip()
+        if "," in target:
+            subs = [s.strip() for s in target.split(",") if s.strip()]
+            res = check_subdomain_takeovers(subdomains=subs)
+        elif target.count(".") <= 1 and not target.startswith("www."):
+            res = check_subdomain_takeovers(subdomains=[], target_domain=target)
+        else:
+            res = check_subdomain_takeovers(subdomains=[target])
+
+        if not want_json:
+            _print_banner()
+            print(f"[*] Subdomain Takeover & Dangling DNS Audit: {args.target}")
+            print(f"    Audited: {res['total_checked']} targets across {res['signatures_count']} SaaS signatures")
+            print(f"    Vulnerabilities: {res['vulnerable_count']} confirmed  |  Dangling CNAMEs: {res['dangling_count']}\n")
+            if res.get("vulnerable"):
+                print("🚨 CONFIRMED TAKEOVER VULNERABILITIES:")
+                for v in res["vulnerable"]:
+                    print(f"  [CRITICAL] {v['subdomain']} -> CNAME {v.get('cname')}")
+                    print(f"             Service: {v['service']}  |  Matched Fingerprint: '{v.get('fingerprint_matched')}'")
+                    print(f"             Action: {v.get('discussion')}\n")
+            if res.get("dangling"):
+                print("⚠️ DANGLING CNAME RECORDS (NXDOMAIN):")
+                for d in res["dangling"]:
+                    print(f"  [HIGH RISK] {d['subdomain']} -> CNAME {d.get('cname')} (NXDOMAIN)")
+                    print(f"              Action: {d.get('discussion')}\n")
+            if not res.get("vulnerable") and not res.get("dangling"):
+                print("✅ 0 takeover vulnerabilities or dangling pointers detected. All audited CNAMEs are clean or active.\n")
+                if res.get("all_cnames"):
+                    print("Discovered CNAME Delegations:")
+                    for c in res["all_cnames"]:
+                        print(f"  - {c['subdomain']} -> {c.get('cname')} ({c.get('status')} / {c.get('service') or 'External'})")
+            return 0
     elif args.cmd == "asn":
         res = recon_asn_bgp(args.asn)
     elif args.cmd == "correlate":
@@ -244,6 +329,37 @@ def main() -> int:
     elif args.cmd == "dorks":
         t_type = classify_target(args.target)
         res = {"target": args.target, "type": t_type, "dorks": synthesize_dorks(args.target, t_type)}
+    elif args.cmd == "mitre":
+        scan_res = run_unified_scan(args.target)
+        mitre_data = scan_res.get("mitre_attack") or map_mitre_attack(scan_res.get("findings", []), scan_res)
+        if args.stix:
+            with open(args.stix, "w", encoding="utf-8") as f:
+                json.dump(scan_res.get("stix_bundle", {}), f, indent=2)
+        if want_json:
+            print(json.dumps(mitre_data, indent=2))
+        else:
+            _print_banner()
+            print(f"[*] Target: {mitre_data['target']}  (Classified as: {mitre_data.get('target_type', scan_res.get('type', '')).upper()})")
+            print(f"    Hardening Score: {mitre_data.get('defensive_score', 0)}/100 | Risk Level: {mitre_data.get('risk_level', 'UNKNOWN')}")
+            print(f"    Total ATT&CK Techniques: {mitre_data.get('total_techniques', 0)} | Tactics Active: {', '.join(f'{k} ({v})' for k, v in mitre_data.get('tactics_summary', {}).items())}\n")
+
+            print("── [DETECTED ATT&CK TECHNIQUES] ──────────────────────────────────────────")
+            for t in mitre_data.get("techniques_detected", []):
+                print(f"  • [{t['id']}] {t['name']}")
+                print(f"    Tactic: {t['tactic']} ({t.get('tactic_id', '')}) | Severity: {t.get('severity', 'MEDIUM')} | Confidence: {t.get('confidence', 'HIGH')}")
+                for ev in t.get("evidence", []):
+                    print(f"    ↳ Evidence: {ev}")
+                print(f"    ↳ Reference: {t.get('url', '')}\n")
+
+            print("── [TACTICAL DEFENSIVE COUNTERMEASURES] ──────────────────────────────────")
+            for cm in mitre_data.get("countermeasures", []):
+                techs = ", ".join(cm.get("associated_techniques", []))
+                print(f"  [{cm.get('priority', 'P2')}] [{cm.get('category', 'Defense')}] (Mitigates: {techs})")
+                print(f"    Action: {cm.get('recommendation')}\n")
+
+            if args.stix:
+                print(f"  + Saved enriched STIX 2.1 Threat Intelligence Bundle to: {args.stix}")
+        return 0
     elif args.cmd == "cases":
         if args.id:
             res = get_case(args.id) or {"error": f"Case #{args.id} not found"}
@@ -279,4 +395,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        sys.exit(0)

@@ -83,6 +83,17 @@ Public Git push activity leaks permanent historical telemetry:
   ```
 - **OpenPGP Universal Keyserver**: Querying `https://keys.openpgp.org/vks/v1/by-email/<email>` validates ownership and retrieves PGP key fingerprints without alerting the user.
 
+### 2.4 Zero-Key Breach & Leak Intelligence: HIBP SHA-1 k-Anonymity & Paste Recon
+Exposing credential compromises without revealing target secrets to third parties:
+- **Mathematical k-Anonymity via HIBP Pwned Passwords**:
+  Instead of sending the password or full hash, compute `SHA-1(credential)`:
+  Send only the first 5 characters (prefix) to `https://api.pwnedpasswords.com/range/{prefix}`.
+  The server returns a block of ~500 hash suffixes and occurrence counts. Search the returned list locally for the remaining 35 characters. This guarantees mathematical zero-knowledge proof.
+- **XposedOrNot Public API & LeakCheck**:
+  Querying `https://api.xposedornot.com/v1/breach-analytics?email={email}` yields exposure records, breach event dates, and PII classes (plain passwords, salted hashes, phone numbers, corporate affiliations).
+- **Tactical Paste Probes**:
+  Scan active pastebin dumps and public GitHub Gists via direct raw slug resolution (`rentry.co/api/raw/{query}`, `dpaste.org/{query}.txt`).
+
 ---
 
 ## Module 03 // Infrastructure Recon, DNS-over-HTTPS, BGP & Port Telemetry
@@ -161,6 +172,17 @@ Analyzing HTTP response headers reveals infrastructure layers without active vul
 - `Server`: Identifies reverse proxies (e.g. `nginx`, `Caddy`, `cloudflare`).
 - `X-Powered-By` & Edge Headers: Detects hosting fabrics (`x-nf-request-id` = Netlify, `x-vercel-id` = Vercel, `cf-ray` = Cloudflare).
 - `Strict-Transport-Security`, `Content-Security-Policy`, `X-Frame-Options`: Scored across a 0–100 posture matrix to determine organizational hardening.
+
+### 4.4 Subdomain Takeover & Dangling DNS Fingerprinting
+Subdomain takeover occurs when a DNS record (typically a CNAME) points to an external cloud or SaaS resource that has been deleted or unclaimed:
+- **Dangling CNAME Resolution**: Use DoH to resolve CNAMEs. If the target returns `NXDOMAIN` (RCODE 3), the pointer is dangling.
+- **SaaS Signature Fingerprinting**: Inspect HTTP error responses against known provider fingerprints:
+  - **GitHub Pages**: `"There isn't a GitHub Pages site here"` (`*.github.io`)
+  - **AWS S3**: `"<Code>NoSuchBucket</Code>"` (`*.s3.amazonaws.com`)
+  - **Heroku**: `"No such app"` (`*.herokuapp.com`)
+  - **Netlify**: `"Not Found - Request ID:"` (`*.netlify.app`)
+  - **Fastly**: `"Fastly error: unknown domain"` (`*.fastly.net`)
+- **Remediation**: Remove dangling CNAMEs immediately or register the orphan bucket/app in the tenant account before adversaries claim it.
 
 ---
 
@@ -275,6 +297,18 @@ Export intelligence investigations directly into visual spatial canvas files for
 
 ### 8.3 Gephi / Cytoscape GEXF 1.3 XML Export
 Export multi-target supergraphs into `.gexf` format to run force-directed network layouts (ForceAtlas2) and detect network modularity clusters.
+
+### 8.4 MITRE ATT&CK Enterprise Matrix Mapping & Defensive Countermeasures
+Modern OSINT bridges threat surface discovery with standard defensive cybersecurity taxonomies:
+- **MITRE ATT&CK Mapping (v14.1)**:
+  - `T1595.002` (Vulnerability Scanning) ← Shodan open ports and known CVEs.
+  - `T1190` (Exploit Public-Facing Application) ← Web servers with exposed services or unpatched CVEs.
+  - `T1133` (External Remote Services) ← Exposed SSH (22), RDP (3389), SMB (445), and unauthenticated databases (Redis 6379, MongoDB 27017).
+  - `T1566` (Phishing / Domain Impersonation) ← Missing or permissive DMARC (`p=none`) and SPF records.
+  - `T1552.001` (Unsecured Credentials: In Files) ← Exposed `.env`, `.git`, or backup files in historical snapshots.
+  - `T1589.001` (Credentials) ← Compromised emails and passwords in public breaches.
+- **Automated STIX 2.1 SDO Synthesis**:
+  Every detected technique is automatically packaged as a STIX `attack-pattern` linked to defensive `course-of-action` recommendations.
 
 ---
 

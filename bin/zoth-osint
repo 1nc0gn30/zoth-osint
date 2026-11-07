@@ -21,8 +21,11 @@ from engine.osint_core import (  # noqa: E402
     classify_target,
     recon_domain,
     recon_email,
+    recon_favicon_mmh3,
     recon_ip,
+    recon_new_age_identity,
     recon_phone,
+    recon_rdap,
     recon_username,
     recon_wallet,
     recon_wayback,
@@ -33,7 +36,7 @@ from engine.osint_core import (  # noqa: E402
 
 def _print_banner() -> None:
     print("╔══════════════════════════════════════════════════════════════════════╗")
-    print("║  ZOTH-OSINT v2.0 // SOVEREIGN OPEN-SOURCE INTELLIGENCE ORCHESTRATOR ║")
+    print("║  ZOTH-OSINT v3.0 // NEW-AGE SOVEREIGN OSINT & 32-TOOL ORCHESTRATOR  ║")
     print("║  Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform      ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
 
@@ -87,6 +90,24 @@ def main() -> int:
     p_wb = sub.add_parser("wayback", help="Wayback Machine CDX historical endpoint & sensitive path discovery")
     p_wb.add_argument("domain", help="Domain name (e.g. nullai.tech)")
     p_wb.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # favicon
+    p_fav = sub.add_parser("favicon", help="Compute Shodan/Censys 32-bit signed MurmurHash3 (mmh3) & SHA256 for a domain's /favicon.ico")
+    p_fav.add_argument("domain", help="Domain name (e.g. nullai.tech)")
+    p_fav.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # web3
+    p_w3 = sub.add_parser("web3", help="Resolve Bluesky ATProto DIDs (did:plc), ENS (.eth) Web3 profiles & HuggingFace AI models")
+    p_w3.add_argument("target", help="Handle, domain, or .eth name (e.g. vitalik.eth or bsky.app)")
+    p_w3.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # rdap
+    p_rd = sub.add_parser("rdap", help="Query structured IETF RDAP registry (registrar, registration/expiration dates, DNSSEC)")
+    p_rd.add_argument("target", help="Domain or IPv4 address")
+    p_rd.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # mcp
+    sub.add_parser("mcp", help="Run the Zoth OSINT Model Context Protocol (MCP) JSON-RPC 2.0 STDIO server")
 
     # dorks
     p_dk = sub.add_parser("dorks", help="Synthesize 18 targeted Google, GitHub, Shodan & CT search queries for a target")
@@ -178,6 +199,17 @@ def main() -> int:
         res = recon_phone(args.number)
     elif args.cmd == "wayback":
         res = recon_wayback(args.domain)
+    elif args.cmd == "favicon":
+        res = recon_favicon_mmh3(args.domain)
+    elif args.cmd == "web3":
+        res = recon_new_age_identity(args.target)
+    elif args.cmd == "rdap":
+        res = recon_rdap(args.target, is_ip=(classify_target(args.target) == "ip"))
+    elif args.cmd == "mcp":
+        from mcp_server import run_mcp_stdio
+
+        run_mcp_stdio()
+        return 0
     elif args.cmd == "dorks":
         t_type = classify_target(args.target)
         res = {"target": args.target, "type": t_type, "dorks": synthesize_dorks(args.target, t_type)}

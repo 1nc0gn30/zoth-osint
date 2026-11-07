@@ -13,6 +13,7 @@ Zero-key native reconnaissance across:
   9. Interactive Entity Link Graph + Obsidian .canvas + OASIS STIX 2.1 Threat Bundle
 """
 
+import base64
 import concurrent.futures
 import datetime
 import hashlib
@@ -22,6 +23,7 @@ import os
 import re
 import socket
 import ssl
+import struct
 import time
 import urllib.error
 import urllib.parse
@@ -30,7 +32,55 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from engine.case_store import export_stix_bundle, save_case
 
-USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) ZothOSINT/2.0 (+https://nullai.tech)"
+USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) ZothOSINT/3.0 (+https://nullai.tech)"
+
+
+def _mmh3_hash32(data: bytes, seed: int = 0) -> int:
+    """Pure-Python 32-bit signed MurmurHash3 (exact Shodan/Censys/FOFA favicon hash specification)."""
+    c1 = 0xCC9E2D51
+    c2 = 0x1B873593
+    length = len(data)
+    h1 = seed & 0xFFFFFFFF
+    rounded_end = length & ~0x3
+
+    for i in range(0, rounded_end, 4):
+        k1 = (
+            (data[i] & 0xFF)
+            | ((data[i + 1] & 0xFF) << 8)
+            | ((data[i + 2] & 0xFF) << 16)
+            | (data[i + 3] << 24)
+        ) & 0xFFFFFFFF
+        k1 = (k1 * c1) & 0xFFFFFFFF
+        k1 = ((k1 << 15) | (k1 >> 17)) & 0xFFFFFFFF
+        k1 = (k1 * c2) & 0xFFFFFFFF
+
+        h1 ^= k1
+        h1 = ((h1 << 13) | (h1 >> 19)) & 0xFFFFFFFF
+        h1 = (h1 * 5 + 0xE6546B64) & 0xFFFFFFFF
+
+    k1 = 0
+    val = length & 0x03
+    if val == 3:
+        k1 = (data[rounded_end + 2] & 0xFF) << 16
+    if val in (2, 3):
+        k1 |= (data[rounded_end + 1] & 0xFF) << 8
+    if val in (1, 2, 3):
+        k1 |= data[rounded_end] & 0xFF
+        k1 = (k1 * c1) & 0xFFFFFFFF
+        k1 = ((k1 << 15) | (k1 >> 17)) & 0xFFFFFFFF
+        k1 = (k1 * c2) & 0xFFFFFFFF
+        h1 ^= k1
+
+    h1 ^= length
+    h1 ^= h1 >> 16
+    h1 = (h1 * 0x85EBCA6B) & 0xFFFFFFFF
+    h1 ^= h1 >> 13
+    h1 = (h1 * 0xC2B2AE35) & 0xFFFFFFFF
+    h1 ^= h1 >> 16
+
+    if h1 & 0x80000000:
+        return -((~h1 + 1) & 0xFFFFFFFF)
+    return h1
 
 
 def _http_get_json(url: str, timeout: float = 6.0, headers: Optional[Dict[str, str]] = None) -> Any:
@@ -163,8 +213,176 @@ def synthesize_dorks(target: str, target_type: str) -> List[Dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# 2. WAYBACK MACHINE CDX HISTORICAL ENDPOINT & SECRET HUNTER
+# 2B. NEW-AGE OSINT: FAVICON MURMURHASH3 (MMH3), RDAP, WELL-KNOWN & WEB3/ATPROTO
 # ---------------------------------------------------------------------------
+def recon_favicon_mmh3(domain_input: str) -> Dict[str, Any]:
+    """Download /favicon.ico and compute Shodan/FOFA/Censys 32-bit signed MurmurHash3 (mmh3) + SHA256."""
+    domain = normalize_domain(domain_input)
+    fav_url = f"https://{domain}/favicon.ico"
+    result: Dict[str, Any] = {
+        "domain": domain,
+        "favicon_url": fav_url,
+        "found": False,
+        "size_bytes": 0,
+        "mmh3_hash": None,
+        "sha256": None,
+        "md5": None,
+        "shodan_query": None,
+        "shodan_url": None,
+        "censys_url": None,
+        "fofa_query": None,
+    }
+    try:
+        req = urllib.request.Request(fav_url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=4.5) as resp:
+            raw = resp.read(250_000)
+            if raw and len(raw) > 16:
+                # RFC 2045 base64 with 76-char line breaks + trailing newline (exact Shodan spec)
+                b64_lines = base64.encodebytes(raw)
+                mmh3_val = _mmh3_hash32(b64_lines)
+                sha256_val = hashlib.sha256(raw).hexdigest()
+                md5_val = hashlib.md5(raw).hexdigest()
+                result.update(
+                    {
+                        "found": True,
+                        "size_bytes": len(raw),
+                        "mmh3_hash": mmh3_val,
+                        "sha256": sha256_val,
+                        "md5": md5_val,
+                        "shodan_query": f"http.favicon.hash:{mmh3_val}",
+                        "shodan_url": f"https://www.shodan.io/search?query=http.favicon.hash%3A{mmh3_val}",
+                        "censys_url": f"https://search.censys.io/search?resource=hosts&q=services.http.response.favicons.shodan_hash%3A{mmh3_val}",
+                        "fofa_query": f'icon_hash="{mmh3_val}"',
+                    }
+                )
+    except Exception:
+        pass
+    return result
+
+
+def recon_rdap(target_input: str, is_ip: bool = False) -> Dict[str, Any]:
+    """Query structured IETF RDAP registry (modern JSON replacement for legacy WHOIS)."""
+    clean = target_input.strip() if is_ip else normalize_domain(target_input)
+    kind = "ip" if is_ip else "domain"
+    out: Dict[str, Any] = {
+        "handle": None,
+        "registrar": None,
+        "registered": None,
+        "expiration": None,
+        "last_changed": None,
+        "dnssec_signed": False,
+        "status": [],
+    }
+    try:
+        data = _http_get_json(f"https://rdap.org/{kind}/{urllib.parse.quote(clean)}", timeout=5.0)
+        if isinstance(data, dict):
+            out["handle"] = data.get("handle") or data.get("ldhName")
+            out["status"] = data.get("status", [])[:6]
+            out["dnssec_signed"] = bool((data.get("secureDNS") or {}).get("delegationSigned"))
+            for ev in data.get("events", []):
+                act = ev.get("eventAction", "")
+                dt = ev.get("eventDate", "")
+                if act == "registration":
+                    out["registered"] = dt
+                elif act == "expiration":
+                    out["expiration"] = dt
+                elif act == "last changed":
+                    out["last_changed"] = dt
+            for ent in data.get("entities", []):
+                if "registrar" in (ent.get("roles") or []):
+                    vcard = ent.get("vcardArray")
+                    if isinstance(vcard, list) and len(vcard) > 1:
+                        for row in vcard[1]:
+                            if isinstance(row, list) and len(row) >= 4 and row[0] == "fn":
+                                out["registrar"] = row[3]
+    except Exception:
+        pass
+    return out
+
+
+def recon_well_known(domain_input: str) -> Dict[str, Any]:
+    """Probe RFC 9116 security.txt, AI llms.txt, Bluesky ATProto DID, Nostr NIP-05, and OIDC manifests."""
+    domain = normalize_domain(domain_input)
+    probes = {
+        "security_txt": f"https://{domain}/.well-known/security.txt",
+        "llms_txt": f"https://{domain}/llms.txt",
+        "atproto_did": f"https://{domain}/.well-known/atproto-did",
+        "nostr_nip05": f"https://{domain}/.well-known/nostr.json",
+        "openid_config": f"https://{domain}/.well-known/openid-configuration",
+    }
+    discovered: Dict[str, Any] = {}
+
+    def _check(item: Tuple[str, str]) -> Tuple[str, Any]:
+        key, url = item
+        try:
+            code, body, _ = _http_get_text(url, timeout=3.8)
+            if code == 200 and body and "<html" not in body[:180].lower():
+                return key, {"present": True, "url": url, "preview": body.strip()[:280]}
+        except Exception:
+            pass
+        return key, {"present": False, "url": url}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+        for k, val in ex.map(_check, probes.items()):
+            discovered[k] = val
+    return discovered
+
+
+def recon_new_age_identity(target_input: str) -> Dict[str, Any]:
+    """Resolve Bluesky ATProto DIDs, ENS (.eth) Web3 identities, Nostr NIP-05, and HuggingFace AI artifacts."""
+    clean = target_input.strip().lstrip("@")
+    out: Dict[str, Any] = {
+        "target": clean,
+        "atproto_bluesky": {},
+        "ens_web3": {},
+        "huggingface_ai": {"models": [], "datasets": []},
+    }
+
+    # 1. Bluesky AT Protocol Handle -> DID -> PLC Directory Document
+    bsky_handle = clean if "." in clean else f"{clean}.bsky.social"
+    try:
+        did_res = _http_get_json(
+            f"https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle={urllib.parse.quote(bsky_handle)}",
+            timeout=4.5,
+        )
+        did = did_res.get("did") if isinstance(did_res, dict) else None
+        if did:
+            out["atproto_bluesky"] = {"handle": bsky_handle, "did": did, "profile_url": f"https://bsky.app/profile/{bsky_handle}"}
+            if did.startswith("did:plc:"):
+                plc = _http_get_json(f"https://plc.directory/{did}", timeout=4.0)
+                if isinstance(plc, dict):
+                    out["atproto_bluesky"]["also_known_as"] = plc.get("alsoKnownAs", [])
+                    out["atproto_bluesky"]["services"] = plc.get("service", [])
+    except Exception:
+        pass
+
+    # 2. ENS (.eth) or Web3 Address Resolution
+    if clean.endswith(".eth") or clean.startswith("0x"):
+        try:
+            ens = _http_get_json(f"https://api.ensdata.net/{urllib.parse.quote(clean)}", timeout=4.5)
+            if isinstance(ens, dict) and (ens.get("address") or ens.get("ens")):
+                out["ens_web3"] = {
+                    "ens": ens.get("ens") or ens.get("ens_primary"),
+                    "address": ens.get("address"),
+                    "avatar": ens.get("avatar"),
+                    "twitter": ens.get("twitter"),
+                    "github": ens.get("github"),
+                    "url": ens.get("url"),
+                }
+        except Exception:
+            pass
+
+    # 3. HuggingFace AI Supply-Chain Footprint (Models & Datasets)
+    if "." not in clean and not clean.startswith("0x"):
+        try:
+            models = _http_get_json(f"https://huggingface.co/api/models?author={urllib.parse.quote(clean)}&limit=5", timeout=4.5)
+            if isinstance(models, list):
+                out["huggingface_ai"]["models"] = [m.get("id") for m in models if m.get("id")]
+        except Exception:
+            pass
+
+    return out
+
 def recon_wayback(domain_input: str, limit: int = 45) -> Dict[str, Any]:
     domain = normalize_domain(domain_input)
     result: Dict[str, Any] = {
@@ -349,8 +567,16 @@ def recon_domain(domain_input: str) -> Dict[str, Any]:
     except Exception:
         result["tls"] = {}
 
-    # Wayback Machine CDX historical endpoint discovery
-    result["wayback"] = recon_wayback(domain, limit=30)
+    # Wayback Machine CDX, Favicon MMH3, RDAP & Well-Known discovery in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex2:
+        f_wb = ex2.submit(recon_wayback, domain, 30)
+        f_fav = ex2.submit(recon_favicon_mmh3, domain)
+        f_rdap = ex2.submit(recon_rdap, domain, False)
+        f_wk = ex2.submit(recon_well_known, domain)
+        result["wayback"] = f_wb.result()
+        result["favicon"] = f_fav.result()
+        result["rdap"] = f_rdap.result()
+        result["well_known"] = f_wk.result()
 
     a_records = [ip for ip in result["dns"].get("A", []) if re.match(r"^(?:\d{1,3}\.){3}\d{1,3}$", ip)]
     for ip in a_records[:2]:
@@ -359,6 +585,17 @@ def recon_domain(domain_input: str) -> Dict[str, Any]:
     result["findings"].append(
         f"Resolved {len(a_records)} IPv4 A records, {len(result['dns'].get('MX', []))} MX servers, {len(result['subdomains'])} CT subdomains, and {result['wayback'].get('total_sampled', 0)} Wayback CDX snapshots."
     )
+    if result["favicon"].get("found"):
+        result["findings"].append(
+            f"Computed Shodan/Censys Favicon MurmurHash3 (mmh3): {result['favicon']['mmh3_hash']} (SHA-256: {result['favicon']['sha256'][:16]}…)."
+        )
+    if result["rdap"].get("registrar"):
+        result["findings"].append(
+            f"RDAP Registry: {result['rdap']['registrar']} (Registered: {str(result['rdap'].get('registered', ''))[:10]}, DNSSEC: {'Signed' if result['rdap'].get('dnssec_signed') else 'Unsigned'})."
+        )
+    wk_found = [k for k, v in result["well_known"].items() if v.get("present")]
+    if wk_found:
+        result["findings"].append(f"Discovered sovereign/security manifests: {', '.join(wk_found)}.")
     result["findings"].append(
         f"Email spoof defense posture: Grade {result['email_security']['grade']} (SPF: {'Yes' if spf_rec else 'No'}, DMARC: {'Yes' if result['email_security']['dmarc'] else 'No'})."
     )
@@ -372,6 +609,8 @@ def recon_domain(domain_input: str) -> Dict[str, Any]:
 PLATFORMS = [
     {"name": "GitHub", "category": "Dev & Code", "url": "https://github.com/{u}", "api": "https://api.github.com/users/{u}"},
     {"name": "GitLab", "category": "Dev & Code", "url": "https://gitlab.com/{u}", "api": "https://gitlab.com/api/v4/users?username={u}"},
+    {"name": "HuggingFace", "category": "AI & Models", "url": "https://huggingface.co/{u}", "status_probe": "https://huggingface.co/{u}"},
+    {"name": "Bluesky ATProto", "category": "Decentralized Social", "url": "https://bsky.app/profile/{u}.bsky.social", "api": "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle={u}.bsky.social"},
     {"name": "Keybase", "category": "Crypto & Identity", "url": "https://keybase.io/{u}", "api": "https://keybase.io/_/api/1.0/user/lookup.json?usernames={u}"},
     {"name": "HackerNews", "category": "Tech Community", "url": "https://news.ycombinator.com/user?id={u}", "api": "https://hacker-news.firebaseio.com/v0/user/{u}.json"},
     {"name": "Reddit", "category": "Social", "url": "https://www.reddit.com/user/{u}", "api": "https://www.reddit.com/user/{u}/about.json"},
@@ -574,11 +813,17 @@ def recon_username(username_input: str) -> Dict[str, Any]:
         except Exception:
             pass
 
+    result["new_age_identity"] = recon_new_age_identity(username)
+
     result["findings"].append(f"Confirmed active presence on {len(found)}/{len(PLATFORMS)} high-signal platforms ({', '.join(p['platform'] for p in found)}).")
     if result["github_deep_intel"]["ssh_keys"]:
         result["findings"].append(f"Extracted {len(result['github_deep_intel']['ssh_keys'])} public SSH authentication keys from GitHub endpoint.")
     if result["github_deep_intel"]["commit_emails"]:
         result["findings"].append(f"Recovered {len(result['github_deep_intel']['commit_emails'])} commit author email attribution records.")
+    if result["new_age_identity"].get("atproto_bluesky", {}).get("did"):
+        result["findings"].append(f"Resolved Bluesky ATProto Decentralized Identifier: {result['new_age_identity']['atproto_bluesky']['did']}.")
+    if result["new_age_identity"].get("huggingface_ai", {}).get("models"):
+        result["findings"].append(f"Published {len(result['new_age_identity']['huggingface_ai']['models'])} AI model(s) on HuggingFace Hub.")
 
     return result
 
@@ -914,6 +1159,15 @@ def build_entity_graph(scan_result: Dict[str, Any]) -> Dict[str, Any]:
         for i, mx in enumerate(scan_result.get("dns", {}).get("MX", [])[:4]):
             clean_mx = mx.split()[-1].rstrip(".")
             add_node(f"mx_{i}", clean_mx, "MX", "#38bdf8", "root", "MAIL", pivot=clean_mx)
+        fav = scan_result.get("favicon") or {}
+        if fav.get("found") and fav.get("mmh3_hash") is not None:
+            add_node("fav_mmh3", f"mmh3:{fav['mmh3_hash']}", "FAVICON", "#ffb800", "root", "SHODAN")
+        rdap = scan_result.get("rdap") or {}
+        if rdap.get("registrar"):
+            add_node("rdap_reg", rdap["registrar"][:22], "RDAP", "#00d5ff", "root", "REGISTRAR")
+        for wk_key, wk_val in (scan_result.get("well_known") or {}).items():
+            if wk_val.get("present"):
+                add_node(f"wk_{wk_key}", wk_key, "MANIFEST", "#32ff85", "root", "WELL-KNOWN")
 
     elif ttype == "ip":
         asn = scan_result.get("geo_asn", {}).get("asn")

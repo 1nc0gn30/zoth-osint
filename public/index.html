@@ -582,11 +582,11 @@
         <div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span class="brand-title">ZOTH OSINT</span>
-            <span class="badge">v2.0 SOVEREIGN</span>
+            <span class="badge">v3.0 NEW-AGE</span>
             <span class="badge badge-green" id="daemonStatusBadge">ENGINE READY</span>
           </div>
           <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">
-            Multi-Pivot OSINT Engine (Identity · Domain · IP · Email · Crypto Wallet · Phone) &amp; 24-Tool Orchestrator
+            Multi-Pivot OSINT Engine (Identity · Domain · IP · Email · Wallet · Phone · Favicon mmh3 · Web3/ATProto · RDAP) &amp; 32-Tool Orchestrator
           </div>
         </div>
       </div>
@@ -640,7 +640,7 @@
       </div>
       <div class="metric-card">
         <div class="metric-label">OPEN-SOURCE ARSENAL</div>
-        <div class="metric-val" id="metricArsenal" style="color:var(--accent-gold);">24 TOOLS</div>
+        <div class="metric-val" id="metricArsenal" style="color:var(--accent-gold);">32 TOOLS</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">CTI &amp; GRAPH EXPORT</div>
@@ -683,10 +683,10 @@
       <div class="panel">
         <div class="tab-bar" role="tablist">
           <button class="tab-btn active" type="button" data-tab="pivotTab">01 // PIVOT TELEMETRY</button>
-          <button class="tab-btn" type="button" data-tab="arsenalTab">02 // 24 OSS TOOLS</button>
+          <button class="tab-btn" type="button" data-tab="arsenalTab">02 // 32 OSS TOOLS</button>
           <button class="tab-btn" type="button" data-tab="dorksTab">03 // DORKS &amp; WAYBACK</button>
           <button class="tab-btn" type="button" data-tab="casesTab">04 // SAVED CASES</button>
-          <button class="tab-btn" type="button" data-tab="forensicsTab">05 // EXIF &amp; CLI</button>
+          <button class="tab-btn" type="button" data-tab="forensicsTab">05 // EXIF &amp; MCP CLI</button>
         </div>
 
         <!-- TAB 1: PIVOT TELEMETRY -->
@@ -977,6 +977,21 @@ zoth-osint cases</pre>
           `;
           pivotEl.appendChild(card);
         }
+
+        const nai = data.new_age_identity || {};
+        if (nai.atproto_bluesky?.did || (nai.huggingface_ai?.models || []).length > 0) {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-purple)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>ATProto &amp; AI Supply-Chain</span><span class="badge badge-purple">NEW-AGE</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.71rem;color:var(--text-secondary);word-break:break-all;">
+              ${nai.atproto_bluesky?.did ? `DID: ${nai.atproto_bluesky.did}` : 'ATProto DID: None'}<br/>
+              HF Models: ${(nai.huggingface_ai?.models || []).length}
+            </div>
+          `;
+          pivotEl.appendChild(card);
+        }
       } else if (data.type === 'domain') {
         const dns = data.dns || {};
         Object.keys(dns).forEach((rtype) => {
@@ -989,6 +1004,41 @@ zoth-osint cases</pre>
           `;
           pivotEl.appendChild(card);
         });
+
+        if (data.favicon && data.favicon.found) {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-gold)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>Favicon MurmurHash3</span><span class="badge badge-gold">mmh3:${data.favicon.mmh3_hash}</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-secondary);word-break:break-all;">SHA256: ${(data.favicon.sha256 || '').slice(0, 20)}…</div>
+            <a href="${data.favicon.shodan_url}" target="_blank" rel="noopener noreferrer" style="font-family:'JetBrains Mono',monospace;font-size:0.71rem;color:var(--accent-cyan);">Shodan Favicon Pivot ↗</a>
+          `;
+          pivotEl.appendChild(card);
+        }
+
+        if (data.rdap && data.rdap.registrar) {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-cyan)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>IETF RDAP Registry</span><span class="badge ${data.rdap.dnssec_signed ? 'badge-green' : ''}">${data.rdap.dnssec_signed ? 'DNSSEC SIGNED' : 'UNSIGNED'}</span></div>
+            <div style="font-size:0.74rem;color:var(--text-secondary);">${data.rdap.registrar}<br/>Reg: ${(data.rdap.registered || '').slice(0, 10)} · Exp: ${(data.rdap.expiration || '').slice(0, 10)}</div>
+          `;
+          pivotEl.appendChild(card);
+        }
+
+        if (data.well_known) {
+          const wkFound = Object.keys(data.well_known).filter((k) => data.well_known[k]?.present);
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-green)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>Sovereign Manifests</span><span class="badge badge-green">${wkFound.length}/5 FOUND</span></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.71rem;color:var(--text-secondary);">${wkFound.join(', ') || 'None detected'}</div>
+          `;
+          pivotEl.appendChild(card);
+        }
 
         if ((data.subdomains || []).length > 0) {
           const card = document.createElement('div');
@@ -1006,8 +1056,8 @@ zoth-osint cases</pre>
           card.className = 'item-card';
           card.style.borderColor = 'var(--accent-gold)';
           card.innerHTML = `
-            <div class="item-card-title"><span>Wayback CDX Archive</span><span class="badge badge-gold">${data.wayback.archived_count || 0} URLS</span></div>
-            <div style="font-size:0.74rem;color:var(--text-secondary);">Sensitive paths flagged: ${(data.wayback.interesting_endpoints || []).length}</div>
+            <div class="item-card-title"><span>Wayback CDX Archive</span><span class="badge badge-gold">${data.wayback.total_sampled || 0} URLS</span></div>
+            <div style="font-size:0.74rem;color:var(--text-secondary);">Sensitive paths flagged: ${(data.wayback.interesting_urls || []).length}</div>
           `;
           pivotEl.appendChild(card);
         }

@@ -282,6 +282,95 @@ OPEN_SOURCE_OSINT_ARSENAL: List[Dict[str, Any]] = [
         "cmd_template": "curl -s 'https://web.archive.org/cdx/search/cdx?url=*.{target}/*&output=json&fl=original,timestamp,statuscode&collapse=urlkey&limit=50'",
         "desc": "Queries the Wayback Machine CDX index to uncover historical endpoints, deleted pages, leaked `.env` files, and old subdomains.",
     },
+    # 7. New-Age Web3, Cloud & Supply-Chain OSINT (2025/2026)
+    {
+        "id": "bbot",
+        "name": "BBOT (Black Lantern Security)",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/blacklanternsecurity/bbot",
+        "stars": "8.4k+",
+        "binary": "bbot",
+        "install_cmd": "pipx install bbot",
+        "cmd_template": "bbot -t {target} -p subdomain-enum passive",
+        "desc": "Recursive modular attack-surface and OSINT event engine chaining DNS, CT logs, cloud buckets, and API discovery.",
+    },
+    {
+        "id": "blackbird",
+        "name": "Blackbird SOCMINT",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/p1ngul1n0/blackbird",
+        "stars": "4.9k+",
+        "binary": "blackbird",
+        "install_cmd": "git clone https://github.com/p1ngul1n0/blackbird",
+        "cmd_template": "blackbird -u {target} --dump",
+        "desc": "Next-gen rapid username & email OSINT enumerator across 600+ platforms with WhatsMyName & AI correlation.",
+    },
+    {
+        "id": "nuclei",
+        "name": "Nuclei (ProjectDiscovery)",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/projectdiscovery/nuclei",
+        "stars": "21.5k+",
+        "binary": "nuclei",
+        "install_cmd": "sudo apt install nuclei",
+        "cmd_template": "nuclei -u https://{target} -tags exposure,token,misconfig -silent",
+        "desc": "YAML template-driven security scanner detecting exposed panels, `.git` configs, API keys, and cloud misconfigurations.",
+    },
+    {
+        "id": "katana",
+        "name": "Katana JS & Endpoint Crawler",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/projectdiscovery/katana",
+        "stars": "12.6k+",
+        "binary": "katana",
+        "install_cmd": "go install github.com/projectdiscovery/katana/cmd/katana@latest",
+        "cmd_template": "katana -u https://{target} -jc -d 2 -silent",
+        "desc": "Next-generation crawling and spidering framework parsing JavaScript bundles for hidden routes and shadow APIs.",
+    },
+    {
+        "id": "trufflehog",
+        "name": "TruffleHog Secret Verifier",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/trufflesecurity/trufflehog",
+        "stars": "16.8k+",
+        "binary": "trufflehog",
+        "install_cmd": "brew install trufflehog",
+        "cmd_template": "trufflehog github --org={target} --only-verified",
+        "desc": "Scans git commit history, GitHub orgs, S3 buckets, and Docker images for 800+ types of leaked credentials and API keys.",
+    },
+    {
+        "id": "gitleaks",
+        "name": "Gitleaks Commit Auditor",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/gitleaks/gitleaks",
+        "stars": "18.2k+",
+        "binary": "gitleaks",
+        "install_cmd": "sudo apt install gitleaks",
+        "cmd_template": "gitleaks detect --source . -v",
+        "desc": "High-speed SAST tool for auditing git repositories, commits, and patches for hardcoded secrets and private keys.",
+    },
+    {
+        "id": "zoth-favicon",
+        "name": "Zoth Favicon MurmurHash3 (mmh3)",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/NullAITech/zoth-osint",
+        "stars": "In-House",
+        "binary": "zoth-osint",
+        "install_cmd": "Built-in to Zoth OSINT",
+        "cmd_template": "zoth-osint favicon {target}",
+        "desc": "Calculates 32-bit signed MurmurHash3 (`mmh3`) + SHA256 on `/favicon.ico` to uncover origin servers behind CDNs on Shodan & Censys.",
+    },
+    {
+        "id": "zoth-web3",
+        "name": "Zoth ATProto / ENS / Nostr / RDAP",
+        "category": "New-Age & Supply-Chain OSINT",
+        "repo": "https://github.com/NullAITech/zoth-osint",
+        "stars": "In-House",
+        "binary": "zoth-osint",
+        "install_cmd": "Built-in to Zoth OSINT",
+        "cmd_template": "zoth-osint web3 {target}",
+        "desc": "Resolves Bluesky ATProto DIDs (`did:plc`), ENS `.eth` profiles, Nostr NIP-05 keys, HuggingFace AI models, and RFC 9116 `security.txt`.",
+    },
 ]
 
 EXTRA_SEARCH_PATHS = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/zothos-ai-env/bin", "/home/zoth/.local/bin"]
@@ -338,6 +427,9 @@ ALLOWED_EXEC_TOOLS = {
     "internetdb",
     "wayback-cdx",
     "git-commit-osint",
+    "zoth-favicon",
+    "zoth-web3",
+    "obsidian-canvas",
 }
 
 
@@ -388,6 +480,12 @@ def execute_arsenal_tool(tool_id: str, target: str, timeout_sec: int = 18) -> Di
         ]
     elif tool_id == "git-commit-osint":
         cmd = [bin_path, "-s", f"https://api.github.com/users/{clean_target.lstrip('@')}/events/public?per_page=15"]
+    elif tool_id == "zoth-favicon":
+        cmd = [bin_path, "favicon", clean_target]
+    elif tool_id == "zoth-web3":
+        cmd = [bin_path, "web3", clean_target]
+    elif tool_id == "obsidian-canvas":
+        cmd = [bin_path, "scan", clean_target, "--canvas", f"/tmp/{clean_target}.canvas"]
     else:
         return {"ok": False, "error": "Unsupported execution mapping"}
 

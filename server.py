@@ -33,6 +33,9 @@ from engine.case_store import get_case, list_cases  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     analyze_bytes_forensics,
     classify_target,
+    recon_favicon_mmh3,
+    recon_new_age_identity,
+    recon_rdap,
     recon_wayback,
     run_unified_scan,
     synthesize_dorks,
@@ -90,6 +93,21 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         if path == "/api/wayback":
             domain = (qs.get("domain") or ["nullai.tech"])[0]
             self._send_json(recon_wayback(domain))
+            return
+
+        if path == "/api/favicon":
+            domain = (qs.get("domain") or ["nullai.tech"])[0]
+            self._send_json(recon_favicon_mmh3(domain))
+            return
+
+        if path == "/api/web3":
+            target = (qs.get("target") or ["1nc0gn30"])[0]
+            self._send_json(recon_new_age_identity(target))
+            return
+
+        if path == "/api/rdap":
+            target = (qs.get("target") or ["nullai.tech"])[0]
+            self._send_json(recon_rdap(target))
             return
 
         if path == "/api/dorks":

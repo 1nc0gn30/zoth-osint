@@ -30,7 +30,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
-from engine.case_store import export_stix_bundle, save_case
+from engine.case_store import export_gexf_xml, export_stix_bundle, save_case
 
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) ZothOSINT/3.0 (+https://nullai.tech)"
 
@@ -383,6 +383,105 @@ def recon_new_age_identity(target_input: str) -> Dict[str, Any]:
 
     return out
 
+
+def recon_http_stack(domain_input: str) -> Dict[str, Any]:
+    """Passive HTTP security header grader & CDN/Web Tech-Stack fingerprinter."""
+    domain = normalize_domain(domain_input)
+    out: Dict[str, Any] = {
+        "domain": domain,
+        "status_code": None,
+        "server": None,
+        "cdn_edge": "Direct / Unidentified",
+        "tech_stack": [],
+        "security_headers": {},
+        "security_score": 0,
+    }
+    try:
+        status, html, hdrs = _http_get_text(f"https://{domain}", timeout=4.5)
+        out["status_code"] = status
+        out["server"] = hdrs.get("server")
+        tech = set()
+        if hdrs.get("server"):
+            tech.add(hdrs["server"])
+        if hdrs.get("x-powered-by"):
+            tech.add(hdrs["x-powered-by"])
+
+        # CDN / Edge Provider Fingerprinting
+        if "cf-ray" in hdrs or "cloudflare" in str(hdrs.get("server", "")).lower():
+            out["cdn_edge"] = "Cloudflare Edge"
+            tech.add("Cloudflare")
+        elif "x-nf-request-id" in hdrs or "netlify" in str(hdrs.get("server", "")).lower():
+            out["cdn_edge"] = "Netlify Edge"
+            tech.add("Netlify")
+        elif "x-vercel-id" in hdrs or "vercel" in str(hdrs.get("server", "")).lower():
+            out["cdn_edge"] = "Vercel Edge"
+            tech.add("Vercel")
+        elif "x-amz-cf-id" in hdrs:
+            out["cdn_edge"] = "AWS CloudFront"
+            tech.add("CloudFront")
+        elif "x-github-request-id" in hdrs:
+            out["cdn_edge"] = "GitHub Pages Fastly"
+            tech.add("GitHub Pages")
+
+        # HTML Tech Fingerprinting
+        low_html = html[:40000].lower()
+        if "_next/static" in low_html or "__next_data__" in low_html:
+            tech.add("Next.js")
+        if "/assets/index-" in low_html or "vite" in low_html:
+            tech.add("Vite / React SPA")
+        if "wp-content" in low_html:
+            tech.add("WordPress")
+        if "application/ld+json" in low_html:
+            tech.add("Schema.org JSON-LD")
+
+        sec_checks = {
+            "strict-transport-security": 25,
+            "content-security-policy": 25,
+            "x-frame-options": 15,
+            "x-content-type-options": 15,
+            "referrer-policy": 10,
+            "permissions-policy": 10,
+        }
+        score = 0
+        for h_name, pts in sec_checks.items():
+            present = h_name in hdrs
+            out["security_headers"][h_name] = hdrs.get(h_name) if present else None
+            if present:
+                score += pts
+        out["security_score"] = score
+        out["tech_stack"] = sorted(tech)
+    except Exception:
+        pass
+    return out
+
+
+def recon_asn_bgp(asn_input: str) -> Dict[str, Any]:
+    """Query zero-key RIPE Stat BGP API for Autonomous System holder & announced IPv4/IPv6 prefixes."""
+    clean = re.sub(r"[^0-9]", "", asn_input.strip()) or "13335"
+    resource = f"AS{clean}"
+    out: Dict[str, Any] = {
+        "asn": resource,
+        "holder": None,
+        "announced_prefixes_count": 0,
+        "ipv4_prefixes": [],
+        "ipv6_prefixes": [],
+    }
+    try:
+        ov = _http_get_json(f"https://stat.ripe.net/data/as-overview/data.json?resource={resource}", timeout=5.0)
+        out["holder"] = ((ov.get("data") or {}).get("holder"))
+    except Exception:
+        pass
+    try:
+        pf = _http_get_json(f"https://stat.ripe.net/data/announced-prefixes/data.json?resource={resource}", timeout=5.5)
+        prefixes = [p.get("prefix") for p in ((pf.get("data") or {}).get("prefixes") or []) if p.get("prefix")]
+        out["announced_prefixes_count"] = len(prefixes)
+        out["ipv4_prefixes"] = [p for p in prefixes if ":" not in p][:25]
+        out["ipv6_prefixes"] = [p for p in prefixes if ":" in p][:15]
+    except Exception:
+        pass
+    return out
+
+
 def recon_wayback(domain_input: str, limit: int = 45) -> Dict[str, Any]:
     domain = normalize_domain(domain_input)
     result: Dict[str, Any] = {
@@ -567,16 +666,18 @@ def recon_domain(domain_input: str) -> Dict[str, Any]:
     except Exception:
         result["tls"] = {}
 
-    # Wayback Machine CDX, Favicon MMH3, RDAP & Well-Known discovery in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex2:
+    # Wayback Machine CDX, Favicon MMH3, RDAP, Well-Known & HTTP Tech-Stack discovery in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex2:
         f_wb = ex2.submit(recon_wayback, domain, 30)
         f_fav = ex2.submit(recon_favicon_mmh3, domain)
         f_rdap = ex2.submit(recon_rdap, domain, False)
         f_wk = ex2.submit(recon_well_known, domain)
+        f_http = ex2.submit(recon_http_stack, domain)
         result["wayback"] = f_wb.result()
         result["favicon"] = f_fav.result()
         result["rdap"] = f_rdap.result()
         result["well_known"] = f_wk.result()
+        result["http_stack"] = f_http.result()
 
     a_records = [ip for ip in result["dns"].get("A", []) if re.match(r"^(?:\d{1,3}\.){3}\d{1,3}$", ip)]
     for ip in a_records[:2]:
@@ -1168,6 +1269,9 @@ def build_entity_graph(scan_result: Dict[str, Any]) -> Dict[str, Any]:
         for wk_key, wk_val in (scan_result.get("well_known") or {}).items():
             if wk_val.get("present"):
                 add_node(f"wk_{wk_key}", wk_key, "MANIFEST", "#32ff85", "root", "WELL-KNOWN")
+        hs = scan_result.get("http_stack") or {}
+        if hs.get("cdn_edge") and hs.get("cdn_edge") != "Direct / Unidentified":
+            add_node("cdn_edge", hs["cdn_edge"], "EDGE", "#38bdf8", "root", "CDN")
 
     elif ttype == "ip":
         asn = scan_result.get("geo_asn", {}).get("asn")
@@ -1290,6 +1394,7 @@ def run_unified_scan(target: str, persist: bool = True) -> Dict[str, Any]:
     data["dorks"] = synthesize_dorks(data.get("target", target), ttype)
     data["obsidian_canvas"] = export_obsidian_canvas(graph, title=f"Zoth OSINT: {data.get('target')}")
     data["stix_bundle"] = export_stix_bundle(data)
+    data["gexf_xml"] = export_gexf_xml(graph, title=f"Zoth OSINT: {data.get('target')}")
 
     if persist:
         try:

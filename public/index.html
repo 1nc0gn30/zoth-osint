@@ -582,11 +582,11 @@
         <div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span class="brand-title">ZOTH OSINT</span>
-            <span class="badge">v3.0 NEW-AGE</span>
+            <span class="badge">v4.0 SUPERGRAPH</span>
             <span class="badge badge-green" id="daemonStatusBadge">ENGINE READY</span>
           </div>
           <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">
-            Multi-Pivot OSINT Engine (Identity · Domain · IP · Email · Wallet · Phone · Favicon mmh3 · Web3/ATProto · RDAP) &amp; 32-Tool Orchestrator
+            Multi-Pivot OSINT Engine (Identity · Domain · IP · Email · Wallet · Phone · Favicon mmh3 · Web3/ATProto · Cross-Case Correlation) &amp; 32-Tool Orchestrator
           </div>
         </div>
       </div>
@@ -595,6 +595,7 @@
         <button class="btn" id="themeToggleBtn" type="button" aria-label="Toggle Dark/Light Theme">◐ THEME</button>
         <button class="btn btn-green" id="exportCanvasBtn" type="button">⬇ OBSIDIAN .CANVAS</button>
         <button class="btn btn-purple" id="exportStixBtn" type="button">⬇ STIX 2.1 .JSON</button>
+        <button class="btn" id="exportGexfBtn" type="button">⬇ GEPHI .GEXF</button>
         <button class="btn" id="exportDossierBtn" type="button">⬇ DOSSIER .MD</button>
         <a class="btn btn-coffee" href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer">☕ Buy Us a Coffee</a>
       </div>
@@ -666,9 +667,16 @@
         <div class="graph-canvas-wrap">
           <canvas id="entityGraphCanvas" width="760" height="430" aria-label="Interactive OSINT Entity Link Graph"></canvas>
           <div class="graph-hud">
-            <span id="graphHudStats">NODES: 0 · EDGES: 0 · DRAG TO PIN · DOUBLE-CLICK NODE TO PIVOT</span>
-            <span>OBSIDIAN .CANVAS + OASIS STIX 2.1</span>
+            <span id="graphHudStats">NODES: 0 · EDGES: 0 · CLICK TO INSPECT · DOUBLE-CLICK NODE TO PIVOT</span>
+            <span>OBSIDIAN .CANVAS · STIX 2.1 · GEPHI .GEXF</span>
           </div>
+        </div>
+
+        <div id="selectedNodeBar" style="margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--bg-elevated);border:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--text-secondary);" id="selectedNodeInfo">
+            SELECTED NODE: <strong style="color:var(--accent-cyan);">@1nc0gn30</strong> [IDENTITY] — Click any graph node to inspect or pivot
+          </div>
+          <button class="btn btn-green" id="pivotSelectedNodeBtn" type="button" style="min-height:30px;padding:4px 10px;font-size:0.69rem;">⚡ PIVOT SCAN NODE</button>
         </div>
 
         <div style="margin-top:14px;">
@@ -722,13 +730,16 @@
           <pre class="mono-box" id="waybackBox">Run a domain scan (e.g., nullai.tech) to inspect historical Wayback Machine CDX snapshots and sensitive paths.</pre>
         </div>
 
-        <!-- TAB 4: SAVED SQLITE INVESTIGATION CASES -->
+        <!-- TAB 4: SAVED SQLITE INVESTIGATION CASES & SUPERGRAPH CORRELATION -->
         <div id="casesTab" class="tab-pane" style="display:none;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
             <span style="font-size:0.83rem;color:var(--text-secondary);">
-              Local SQLite investigation ledger (<code>~/.zoth-osint/cases.db</code>). Click any saved case to restore its graph and telemetry.
+              Local SQLite investigation ledger (<code>~/.zoth-osint/cases.db</code>). Merge cases to detect shared infrastructure overlaps.
             </span>
-            <button class="btn" id="refreshCasesBtn" type="button" style="min-height:32px;padding:4px 10px;font-size:0.7rem;">↻ REFRESH</button>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-purple" id="correlateCasesBtn" type="button" style="min-height:32px;padding:4px 10px;font-size:0.7rem;">⚡ MERGE &amp; CORRELATE SUPERGRAPH</button>
+              <button class="btn" id="refreshCasesBtn" type="button" style="min-height:32px;padding:4px 10px;font-size:0.7rem;">↻ REFRESH</button>
+            </div>
           </div>
           <div id="casesGrid" class="data-grid"></div>
         </div>
@@ -1051,6 +1062,17 @@ zoth-osint cases</pre>
           pivotEl.appendChild(card);
         }
 
+        if (data.http_stack && data.http_stack.status_code) {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-cyan)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>HTTP Stack &amp; Edge</span><span class="badge badge-green">SEC ${data.http_stack.security_score || 0}/100</span></div>
+            <div style="font-size:0.74rem;color:var(--text-secondary);">CDN: ${data.http_stack.cdn_edge}<br/>Tech: ${(data.http_stack.tech_stack || []).join(', ') || 'Standard HTTP'}</div>
+          `;
+          pivotEl.appendChild(card);
+        }
+
         if (data.wayback) {
           const card = document.createElement('div');
           card.className = 'item-card';
@@ -1061,6 +1083,17 @@ zoth-osint cases</pre>
           `;
           pivotEl.appendChild(card);
         }
+      } else if (data.type === 'correlation') {
+        (data.shared_overlaps || []).forEach((ov) => {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.style.borderColor = 'var(--accent-gold)';
+          card.innerHTML = `
+            <div class="item-card-title"><span>${ov.entity}</span><span class="badge badge-gold">SHARED ${ov.type}</span></div>
+            <div style="font-size:0.74rem;color:var(--text-secondary);">Linked across: ${(ov.shared_across || []).join(' ⊕ ')}</div>
+          `;
+          pivotEl.appendChild(card);
+        });
       } else if (data.type === 'ip') {
         const idb = data.internetdb || {};
         const geo = data.geo_asn || {};
@@ -1212,7 +1245,20 @@ zoth-osint cases</pre>
       const rect = canvas.getBoundingClientRect();
       const mx = ev.clientX - rect.left;
       const my = ev.clientY - rect.top;
-      state.dragNode = state.nodes.find((n) => Math.hypot(n.x - mx, n.y - my) <= n.r + 8) || null;
+      const hit = state.nodes.find((n) => Math.hypot(n.x - mx, n.y - my) <= n.r + 8) || null;
+      state.dragNode = hit;
+      if (hit) {
+        state.selectedNode = hit;
+        document.getElementById('selectedNodeInfo').innerHTML = `SELECTED NODE: <strong style="color:var(--accent-cyan);">${hit.label}</strong> [${hit.type}] — Pivot: <code>${hit.pivot || hit.label}</code>`;
+      }
+    });
+
+    document.getElementById('pivotSelectedNodeBtn').addEventListener('click', () => {
+      const piv = state.selectedNode?.pivot || state.selectedNode?.label;
+      if (piv) {
+        targetInput.value = piv;
+        runMultiPivotScan();
+      }
     });
 
     canvas.addEventListener('dblclick', (ev) => {
@@ -1282,6 +1328,22 @@ zoth-osint cases</pre>
     }
 
     document.getElementById('refreshCasesBtn').addEventListener('click', loadSavedCases);
+
+    document.getElementById('correlateCasesBtn').addEventListener('click', async () => {
+      try {
+        const r = await fetch('/api/correlate');
+        if (!r.ok) return;
+        const corr = await r.json();
+        state.scanData = corr;
+        document.getElementById('metricTarget').textContent = 'SUPERGRAPH CORRELATION';
+        renderScanResults(corr);
+      } catch (_) {}
+    });
+
+    document.getElementById('exportGexfBtn').addEventListener('click', () => {
+      const gexf = state.scanData?.gexf_xml || '<?xml version="1.0" encoding="UTF-8"?><gexf version="1.3"></gexf>';
+      downloadBlob(`zoth-osint-${state.target}.gexf`, gexf, 'application/xml');
+    });
 
     // =========================================================================
     // LOAD & EXECUTE TOP 24 OPEN-SOURCE OSINT ARSENAL

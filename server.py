@@ -29,11 +29,13 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from engine.arsenal_runner import execute_arsenal_tool, get_arsenal_status  # noqa: E402
-from engine.case_store import get_case, list_cases  # noqa: E402
+from engine.case_store import correlate_cases, get_case, list_cases  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     analyze_bytes_forensics,
     classify_target,
+    recon_asn_bgp,
     recon_favicon_mmh3,
+    recon_http_stack,
     recon_new_age_identity,
     recon_rdap,
     recon_wayback,
@@ -108,6 +110,22 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         if path == "/api/rdap":
             target = (qs.get("target") or ["nullai.tech"])[0]
             self._send_json(recon_rdap(target))
+            return
+
+        if path == "/api/tech":
+            domain = (qs.get("domain") or ["nullai.tech"])[0]
+            self._send_json(recon_http_stack(domain))
+            return
+
+        if path == "/api/asn":
+            asn = (qs.get("asn") or ["13335"])[0]
+            self._send_json(recon_asn_bgp(asn))
+            return
+
+        if path == "/api/correlate":
+            raw_ids = (qs.get("ids") or [""])[0]
+            ids = [int(x) for x in raw_ids.split(",") if x.strip().isdigit()]
+            self._send_json(correlate_cases(ids))
             return
 
         if path == "/api/dorks":

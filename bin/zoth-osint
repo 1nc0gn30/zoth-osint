@@ -15,13 +15,15 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from engine.arsenal_runner import execute_arsenal_tool, get_arsenal_status  # noqa: E402
-from engine.case_store import get_case, list_cases  # noqa: E402
+from engine.case_store import correlate_cases, correlate_payloads, get_case, list_cases  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     analyze_file_forensics,
     classify_target,
+    recon_asn_bgp,
     recon_domain,
     recon_email,
     recon_favicon_mmh3,
+    recon_http_stack,
     recon_ip,
     recon_new_age_identity,
     recon_phone,
@@ -36,7 +38,7 @@ from engine.osint_core import (  # noqa: E402
 
 def _print_banner() -> None:
     print("╔══════════════════════════════════════════════════════════════════════╗")
-    print("║  ZOTH-OSINT v3.0 // NEW-AGE SOVEREIGN OSINT & 32-TOOL ORCHESTRATOR  ║")
+    print("║  ZOTH-OSINT v4.0 // SOVEREIGN CORRELATION & 32-TOOL ORCHESTRATOR    ║")
     print("║  Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform      ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
 
@@ -105,6 +107,22 @@ def main() -> int:
     p_rd = sub.add_parser("rdap", help="Query structured IETF RDAP registry (registrar, registration/expiration dates, DNSSEC)")
     p_rd.add_argument("target", help="Domain or IPv4 address")
     p_rd.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # tech
+    p_tc = sub.add_parser("tech", help="Passive HTTP security header grader (0-100) & CDN/Web Tech-Stack fingerprinter")
+    p_tc.add_argument("domain", help="Domain name (e.g. nullai.tech)")
+    p_tc.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # asn
+    p_as = sub.add_parser("asn", help="Query RIPE Stat BGP API for Autonomous System holder & announced CIDR prefixes")
+    p_as.add_argument("asn", help="ASN number (e.g. AS13335 or 13335)")
+    p_as.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # correlate
+    p_cr = sub.add_parser("correlate", help="Merge multiple OSINT targets or saved cases into a Unified Supergraph & detect shared overlaps")
+    p_cr.add_argument("targets", nargs="*", help="Two or more targets to scan and correlate (or omit to correlate recent saved cases)")
+    p_cr.add_argument("--gexf", help="Write Gephi / Cytoscape .gexf XML graph to file path")
+    p_cr.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # mcp
     sub.add_parser("mcp", help="Run the Zoth OSINT Model Context Protocol (MCP) JSON-RPC 2.0 STDIO server")
@@ -205,6 +223,19 @@ def main() -> int:
         res = recon_new_age_identity(args.target)
     elif args.cmd == "rdap":
         res = recon_rdap(args.target, is_ip=(classify_target(args.target) == "ip"))
+    elif args.cmd == "tech":
+        res = recon_http_stack(args.domain)
+    elif args.cmd == "asn":
+        res = recon_asn_bgp(args.asn)
+    elif args.cmd == "correlate":
+        if args.targets and len(args.targets) >= 2:
+            payloads = [run_unified_scan(t) for t in args.targets[:4]]
+            res = correlate_payloads(payloads)
+        else:
+            res = correlate_cases([])
+        if args.gexf:
+            with open(args.gexf, "w", encoding="utf-8") as f:
+                f.write(res.get("gexf_xml", ""))
     elif args.cmd == "mcp":
         from mcp_server import run_mcp_stdio
 

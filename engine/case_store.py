@@ -173,3 +173,136 @@ def export_stix_bundle(scan_data: Dict[str, Any]) -> Dict[str, Any]:
         "id": f"bundle--{bundle_uuid[:8]}-{bundle_uuid[8:12]}-{bundle_uuid[12:16]}-{bundle_uuid[16:20]}-{bundle_uuid[20:32]}",
         "objects": objects,
     }
+
+
+def export_gexf_xml(graph: Dict[str, Any], title: str = "Zoth OSINT Entity Graph") -> str:
+    """Export an entity graph to Gephi / Cytoscape GEXF 1.3 XML format."""
+    import xml.sax.saxutils as saxutils
+
+    esc = saxutils.escape
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<gexf xmlns="http://www.gexf.net/1.3" version="1.3">',
+        f'  <meta lastmodifieddate="{datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")}">',
+        '    <creator>Zoth OSINT v4.0 (NullAI Platform)</creator>',
+        f'    <description>{esc(title)}</description>',
+        '  </meta>',
+        '  <graph mode="static" defaultedgetype="directed">',
+        '    <attributes class="node">',
+        '      <attribute id="0" title="entity_type" type="string"/>',
+        '      <attribute id="1" title="pivot" type="string"/>',
+        '    </attributes>',
+        '    <nodes>',
+    ]
+    for n in graph.get("nodes", []):
+        nid = esc(str(n.get("id", "")))
+        lbl = esc(str(n.get("label", "")))
+        ntype = esc(str(n.get("type", "ENTITY")))
+        piv = esc(str(n.get("pivot", "")))
+        lines.append(f'      <node id="{nid}" label="{lbl}">')
+        lines.append('        <attvalues>')
+        lines.append(f'          <attvalue for="0" value="{ntype}"/>')
+        lines.append(f'          <attvalue for="1" value="{piv}"/>')
+        lines.append('        </attvalues>')
+        lines.append('      </node>')
+    lines.append('    </nodes>')
+    lines.append('    <edges>')
+    for i, e in enumerate(graph.get("edges", [])):
+        src = esc(str(e.get("from", "")))
+        dst = esc(str(e.get("to", "")))
+        elbl = esc(str(e.get("label", "")))
+        lines.append(f'      <edge id="{i}" source="{src}" target="{dst}" label="{elbl}"/>')
+    lines.append('    </edges>')
+    lines.append('  </graph>')
+    lines.append('</gexf>')
+    return "\n".join(lines)
+
+
+def correlate_payloads(payloads: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Merge multiple OSINT scan payloads into a Unified Cross-Pivot Supergraph and detect shared entities."""
+    merged_nodes: Dict[str, Dict[str, Any]] = {}
+    merged_edges: List[Dict[str, str]] = []
+    occurrence_map: Dict[str, List[str]] = {}
+    targets = []
+
+    for idx, p in enumerate(payloads):
+        t_name = str(p.get("target") or f"target_{idx}")
+        targets.append(t_name)
+        g = p.get("graph") or {}
+        id_remap: Dict[str, str] = {}
+
+        for n in g.get("nodes", []):
+            orig_id = str(n.get("id", ""))
+            lbl = str(n.get("label", "")).strip()
+            ntype = str(n.get("type", "ENTITY")).upper()
+            canon_key = f"{ntype}:{lbl.lower()}"
+            id_remap[orig_id] = canon_key
+
+            if canon_key not in occurrence_map:
+                occurrence_map[canon_key] = []
+            if t_name not in occurrence_map[canon_key]:
+                occurrence_map[canon_key].append(t_name)
+
+            if canon_key not in merged_nodes:
+                merged_nodes[canon_key] = {
+                    "id": canon_key,
+                    "label": lbl,
+                    "type": ntype,
+                    "color": "#00d5ff" if orig_id == "root" else n.get("color", "#32ff85"),
+                    "pivot": n.get("pivot", lbl),
+                }
+
+        for e in g.get("edges", []):
+            u = id_remap.get(str(e.get("from", "")))
+            v = id_remap.get(str(e.get("to", "")))
+            if u and v:
+                merged_edges.append({"from": u, "to": v, "label": str(e.get("label", ""))})
+
+    overlaps = []
+    for canon_key, seen_targets in occurrence_map.items():
+        if len(seen_targets) > 1:
+            node_obj = merged_nodes[canon_key]
+            node_obj["color"] = "#ffb800"  # Highlight shared overlap nodes in gold
+            overlaps.append(
+                {
+                    "entity": node_obj["label"],
+                    "type": node_obj["type"],
+                    "shared_across": seen_targets,
+                }
+            )
+
+    findings = [
+        f"Merged {len(payloads)} investigations ({', '.join(targets)}) into a Unified Supergraph ({len(merged_nodes)} unique entities, {len(merged_edges)} links).",
+    ]
+    if overlaps:
+        findings.append(f"SHARED PIVOT ALERT: Detected {len(overlaps)} overlapping entities shared across multiple targets ({', '.join(o['entity'] for o in overlaps[:6])}).")
+    else:
+        findings.append("Zero direct entity overlaps detected between the selected targets; graphs combined for side-by-side link analysis.")
+
+    super_graph = {"nodes": list(merged_nodes.values()), "edges": merged_edges}
+    result = {
+        "target": " ⊕ ".join(targets),
+        "type": "correlation",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "targets_merged": targets,
+        "shared_overlaps": overlaps,
+        "findings": findings,
+        "graph": super_graph,
+    }
+    result["stix_bundle"] = export_stix_bundle(result)
+    result["gexf_xml"] = export_gexf_xml(super_graph, title=f"Correlation: {' + '.join(targets)}")
+    return result
+
+
+def correlate_cases(case_ids: List[int], db_path: str = DEFAULT_DB_PATH) -> Dict[str, Any]:
+    payloads = []
+    for cid in case_ids:
+        c = get_case(cid, db_path=db_path)
+        if c:
+            payloads.append(c)
+    if not payloads:
+        for row in list_cases(limit=3, db_path=db_path):
+            c = get_case(row["id"], db_path=db_path)
+            if c:
+                payloads.append(c)
+    return correlate_payloads(payloads)

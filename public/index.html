@@ -570,6 +570,9 @@
       .graph-canvas-wrap {
         height: 320px;
       }
+      .course-layout-grid {
+        grid-template-columns: 1fr !important;
+      }
     }
   </style>
 </head>
@@ -694,7 +697,8 @@
           <button class="tab-btn" type="button" data-tab="arsenalTab">02 // 32 OSS TOOLS</button>
           <button class="tab-btn" type="button" data-tab="dorksTab">03 // DORKS &amp; WAYBACK</button>
           <button class="tab-btn" type="button" data-tab="casesTab">04 // SAVED CASES</button>
-          <button class="tab-btn" type="button" data-tab="forensicsTab">05 // EXIF &amp; MCP CLI</button>
+          <button class="tab-btn" type="button" data-tab="courseTab">05 // OSINT MASTERCLASS</button>
+          <button class="tab-btn" type="button" data-tab="forensicsTab">06 // EXIF &amp; MCP CLI</button>
         </div>
 
         <!-- TAB 1: PIVOT TELEMETRY -->
@@ -742,6 +746,39 @@
             </div>
           </div>
           <div id="casesGrid" class="data-grid"></div>
+        </div>
+
+        <!-- TAB 5: SOVEREIGN OSINT MASTERCLASS & FIELD TRAINING COURSE -->
+        <div id="courseTab" class="tab-pane" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <div>
+              <span class="badge badge-gold">ACADEMY v4.0</span>
+              <strong style="margin-left:6px;font-size:0.95rem;">SOVEREIGN OSINT MASTERCLASS &amp; FIELD MANUAL</strong>
+              <div style="font-size:0.76rem;color:var(--text-secondary);margin-top:2px;">
+                Complete operational curriculum from OpSec hygiene and Favicon MMH3 unmasking to Blockchain RPC forensics.
+              </div>
+            </div>
+            <a class="btn btn-green" href="/OSINT_MASTERCLASS.md" target="_blank" download="SOVEREIGN_OSINT_MASTERCLASS.md" style="min-height:32px;padding:4px 10px;font-size:0.7rem;">⬇ DOWNLOAD MANUAL (.MD)</a>
+          </div>
+
+          <div class="course-layout-grid" style="display:grid;grid-template-columns:220px 1fr;gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:6px;" id="courseModuleNav">
+              <button class="btn course-nav-btn active" type="button" data-module="mod1" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">01 // Fundamentals &amp; OpSec</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod2" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">02 // Identity &amp; SOCMINT</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod3" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">03 // DNS, DoH &amp; Shodan</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod4" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">04 // Favicon MMH3 &amp; CT</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod5" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">05 // Crypto &amp; Web3 RPC</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod6" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">06 // Telephony &amp; GEOINT</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod7" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">07 // Wayback &amp; Forensics</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod8" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">08 // STIX 2.1 &amp; Canvas</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod9" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">09 // 32 OSS Tool Arsenal</button>
+              <button class="btn course-nav-btn" type="button" data-module="mod10" style="justify-content:flex-start;text-align:left;font-size:0.7rem;">10 // Agentic AI &amp; MCP</button>
+            </div>
+
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:10px;padding:16px;max-height:450px;overflow-y:auto;" id="courseModuleContent">
+              <!-- Dynamically populated module view -->
+            </div>
+          </div>
         </div>
 
         <!-- TAB 5: EXIF FORENSICS & ZOTHOS CLI DOCS -->
@@ -846,6 +883,14 @@ zoth-osint cases</pre>
         if (btn.dataset.tab === 'casesTab') loadSavedCases();
       });
     });
+
+    // Support URL ?tab=courseTab or hash deep linking
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab') || window.location.hash.replace('#', '');
+    if (initialTab) {
+      const tabTarget = document.querySelector(`.tab-btn[data-tab="${initialTab}"]`);
+      if (tabTarget) tabTarget.click();
+    }
 
     // Quick preset buttons
     document.querySelectorAll('.preset-btn').forEach((btn) => {
@@ -1339,6 +1384,165 @@ zoth-osint cases</pre>
         renderScanResults(corr);
       } catch (_) {}
     });
+
+    // =========================================================================
+    // SOVEREIGN OSINT MASTERCLASS COURSE MODULES
+    // =========================================================================
+    const courseModules = {
+      mod1: {
+        title: "01 // OSINT Fundamentals, Ethics & Sovereign OpSec Baseline",
+        summary: "Understand the four tiers of intelligence gathering and establish an airtight, zero-leak operational workspace before running reconnaissance.",
+        topics: [
+          "Passive vs. Semi-Passive vs. Active Reconnaissance vs. Attribution Synthesis.",
+          "Preventing DNS Leaks: Enforcing structured DNS-over-HTTPS (DoH) via RFC 8484.",
+          "Local-first sovereign architecture: Why proprietary cloud OSINT SaaS vendors compromise investigation security by logging target searches.",
+          "OpSec hygiene: Ephemeral browser profiles, isolated tunnels, and user-agent rotation."
+        ],
+        command: "zoth-osint scan 1nc0gn30 --canvas /tmp/target.canvas"
+      },
+      mod2: {
+        title: "02 // Digital Identity, SOCMINT & Artifact Forensic Triangulation",
+        summary: "Cross-platform identity correlation across developer repositories, package ecosystems, and decentralized social networks.",
+        topics: [
+          "Concurrent handle enumeration: Probing GitHub, GitLab, PyPI, npm, DockerHub, and HackerNews in parallel.",
+          "GitHub Deep Artifacts: Extracting raw SSH public keys (github.com/<user>.keys) to fingerprint hardware types.",
+          "Commit Author Attribution: Unmasking real developer emails from public git commit history via GitHub Events API.",
+          "Gravatar MD5/SHA256 hash collision and OpenPGP universal keyserver queries."
+        ],
+        command: "zoth-osint username 1nc0gn30 --json"
+      },
+      mod3: {
+        title: "03 // Infrastructure Recon, DNS-over-HTTPS, BGP & Port Telemetry",
+        summary: "Mapping internet infrastructure without sending direct malicious probes to target perimeter firewalls.",
+        topics: [
+          "DNS record taxonomy: Authoritative enumeration of A, AAAA, MX, TXT, NS, and CAA records.",
+          "Email spoofing defense: Grading SPF (v=spf1) hardfail vs softfail and DMARC enforcement policies.",
+          "Zero-Key Shodan InternetDB: Querying open ports, software CPE fingerprints, and known CVEs for any IPv4 address.",
+          "BGP Routing Intelligence: Querying RIPE Stat APIs for ASN ownership and announced IP CIDR prefixes."
+        ],
+        command: "zoth-osint ip 1.1.1.1 --json"
+      },
+      mod4: {
+        title: "04 // Web Asset Fingerprinting: Favicon MMH3 & Certificate Trails",
+        summary: "Unmasking origin web servers hidden behind Cloudflare/CDNs using cryptographic favicon hashing and Certificate Transparency.",
+        topics: [
+          "MurmurHash3 (mmh3) Theory: Computing 32-bit signed MurmurHash3 on RFC 2045 Base64 favicon bytes.",
+          "Shodan & Censys Favicon Queries: Searching http.favicon.hash:<hash> to reveal unprotected staging servers.",
+          "Certificate Transparency (CT) Logs: Querying crt.sh to uncover shadow subdomains and dev environments.",
+          "Passive HTTP Header Security: Grading HSTS, CSP, and X-Frame-Options on a 0-100 posture scale."
+        ],
+        command: "zoth-osint favicon github.com"
+      },
+      mod5: {
+        title: "05 // Cryptographic Ledger OSINT: Solana, EVM & Bitcoin Forensics",
+        summary: "Investigating on-chain distributed ledger activity using direct zero-key blockchain JSON-RPC calls.",
+        topics: [
+          "Solana Mainnet-Beta RPC: Fetching live SOL balances and transaction signatures via getBalance & getSignaturesForAddress.",
+          "Ethereum / EVM RPC: Querying eth_getBalance, outbound nonces (eth_getTransactionCount), and detecting Smart Contracts via eth_getCode.",
+          "Bitcoin Mempool Forensics: Tracking UTXOs, confirmed balances, and transaction history on mempool.space.",
+          "Connecting pseudo-anonymous wallet addresses to real-world infrastructure and identity."
+        ],
+        command: "zoth-osint wallet GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK"
+      },
+      mod6: {
+        title: "06 // Telephony (E.164), Geolocation (GEOINT) & Overpass Spatial",
+        summary: "Normalizing telephone numbers and querying open spatial databases for physical intelligence.",
+        topics: [
+          "ITU-T E.164 Normalization: Converting arbitrary input into standard international and RFC 3966 formats.",
+          "NANPA Area Code Geolocation: Mapping North American area codes (e.g. 757 -> Hampton Roads, VA).",
+          "Messaging Pivots: Generating non-alerting deep links for WhatsApp, Telegram, and Signal.",
+          "Overpass Turbo QL: Formulating spatial queries in OpenStreetMap to find physical utility installations and antennas."
+        ],
+        command: "zoth-osint phone \"+1-757-555-0199\""
+      },
+      mod7: {
+        title: "07 // Time-Travel Recon: Wayback CDX Endpoint & Git Secret Hunting",
+        summary: "Uncovering deleted assets, leaked credentials, and legacy application routes from internet web archives.",
+        topics: [
+          "Wayback Machine CDX API: Wildcard pattern matching for historical endpoints (*.domain.com/*).",
+          "Automated Secret Hunting: Filtering CDX indexes for .env, .git, .sql, swagger.json, and backup files.",
+          "Binary Shannon Entropy: Calculating byte randomness (0-8 bits) to detect encrypted vs plaintext files.",
+          "EXIF metadata and GPS coordinate extraction from images."
+        ],
+        command: "zoth-osint wayback nullai.tech"
+      },
+      mod8: {
+        title: "08 // Link Analysis, OASIS STIX 2.1 CTI & Obsidian Graph Modeling",
+        summary: "Structuring raw investigation discoveries into standardized cyber threat intelligence objects and interactive graphs.",
+        topics: [
+          "OASIS STIX 2.1 Specification: Mapping entities to SDOs (ipv4-addr, domain-name, vulnerability, identity) and SROs.",
+          "Deterministic UUID5 Generation: Creating persistent global identifiers across investigations.",
+          "Obsidian JSON Canvas (.canvas): Exporting spatial link nodes and color-coded relationship boards.",
+          "Gephi / Cytoscape GEXF 1.3 XML: Enabling large-scale network force layouts and clustering algorithms."
+        ],
+        command: "zoth-osint scan nullai.tech --stix /tmp/intel.stix.json --canvas /tmp/intel.canvas"
+      },
+      mod9: {
+        title: "09 // Autonomous Tool Orchestration: 32 Open-Source Arsenal Tools",
+        summary: "Leveraging the top open-source tools across identity, attack surface management, and code auditing.",
+        topics: [
+          "Identity: Sherlock, Maigret, WhatsMyName, Blackbird.",
+          "Asset & Attack Surface: Subfinder, OWASP Amass, BBOT, Katana, httpx.",
+          "Vulnerability & Secrets: Nuclei, TruffleHog, Gitleaks, Shodan InternetDB, Nmap.",
+          "Orchestrating tools via bounded local subprocesses with strict timeout limits and clean output parsing."
+        ],
+        command: "zoth-osint arsenal --target nullai.tech"
+      },
+      mod10: {
+        title: "10 // Agentic AI & Model Context Protocol (MCP) in OSINT Workflows",
+        summary: "Integrating autonomous AI agents directly into reconnaissance and intelligence synthesis workflows.",
+        topics: [
+          "Model Context Protocol (MCP): Architecture of JSON-RPC 2.0 STDIO servers for tool calling.",
+          "Autonomous Intelligence Agents: Giving LLMs native tools to run scans, compute favicon hashes, and query RDAP.",
+          "Automated Dossier Generation: Generating executive summaries and technical intelligence reports from structured telemetry."
+        ],
+        command: "zoth-osint mcp"
+      }
+    };
+
+    function renderCourseModule(modKey) {
+      const mod = courseModules[modKey] || courseModules.mod1;
+      const container = document.getElementById('courseModuleContent');
+      if (!container) return;
+      container.innerHTML = `
+        <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:6px;">
+          ${mod.title}
+        </div>
+        <div style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5;margin-bottom:14px;">
+          ${mod.summary}
+        </div>
+        <div class="metric-label" style="margin-bottom:8px;color:var(--accent-cyan);">KEY OPERATIONAL TOPICS &amp; DOCTRINE</div>
+        <ul style="list-style:none;display:grid;gap:8px;margin-bottom:16px;">
+          ${mod.topics.map(t => `<li style="padding:8px 12px;background:var(--bg-surface);border-left:3px solid var(--accent-cyan);border-radius:6px;font-size:0.82rem;line-height:1.45;">${t}</li>`).join('')}
+        </ul>
+        <div class="metric-label" style="margin-bottom:6px;color:var(--accent-green);">LABORATORY CLI COMMAND</div>
+        <pre class="mono-box" style="margin-bottom:10px;">$ ${mod.command}</pre>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-green run-lab-cmd-btn" type="button" data-cmd="${mod.command.replace(/"/g, '&quot;')}" style="min-height:32px;padding:4px 10px;font-size:0.7rem;">⚡ LOAD TARGET IN SCANNER</button>
+          <a class="btn" href="/OSINT_MASTERCLASS.md" target="_blank" style="min-height:32px;padding:4px 10px;font-size:0.7rem;">READ FULL MANUAL ↗</a>
+        </div>
+      `;
+
+      container.querySelector('.run-lab-cmd-btn')?.addEventListener('click', (e) => {
+        const cmd = e.currentTarget.dataset.cmd;
+        const parts = cmd.split(' ');
+        const targetArg = parts[2] ? parts[2].replace(/["']/g, '') : '1nc0gn30';
+        targetInput.value = targetArg;
+        runMultiPivotScan();
+        // Switch back to pivot tab
+        document.querySelector('.tab-btn[data-tab="pivotTab"]')?.click();
+      });
+    }
+
+    document.querySelectorAll('.course-nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.course-nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderCourseModule(btn.dataset.module);
+      });
+    });
+
+    renderCourseModule('mod1');
 
     document.getElementById('exportGexfBtn').addEventListener('click', () => {
       const gexf = state.scanData?.gexf_xml || '<?xml version="1.0" encoding="UTF-8"?><gexf version="1.3"></gexf>';

@@ -19,6 +19,7 @@ from engine.breach_intel import recon_breaches_and_pastes  # noqa: E402
 from engine.case_store import correlate_cases, correlate_payloads, get_case, list_cases  # noqa: E402
 from engine.mitre_attack import map_mitre_attack  # noqa: E402
 from engine.takeover import check_subdomain_takeovers  # noqa: E402
+from engine.voice_announcer import announce_scan_result  # noqa: E402
 from engine.osint_core import (  # noqa: E402
     analyze_file_forensics,
     classify_target,
@@ -52,6 +53,7 @@ def main() -> int:
         description="Zoth OSINT v2.0 — Sovereign Multi-Pivot Reconnaissance & Open-Source OSINT Orchestrator",
     )
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
+    parser.add_argument("--voice", "--announce", dest="voice", action="store_true", help="Announce reconnaissance completion via Kokoro ONNX speech engine (:9394)")
     sub = parser.add_subparsers(dest="cmd")
 
     # scan (auto-classifies target + synthesizes graph + Obsidian canvas + STIX 2.1 bundle)
@@ -59,6 +61,7 @@ def main() -> int:
     p_scan.add_argument("target", help="Target domain, IPv4, @username, email, wallet address, or phone number")
     p_scan.add_argument("--canvas", help="Write Obsidian JSON Canvas (.canvas) to file path")
     p_scan.add_argument("--stix", help="Write OASIS STIX 2.1 Cyber Threat Intelligence Bundle (.json) to file path")
+    p_scan.add_argument("--voice", "--announce", dest="voice", action="store_true", help="Announce reconnaissance completion via Kokoro ONNX speech engine (:9394)")
     p_scan.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # username
@@ -202,6 +205,13 @@ def main() -> int:
 
     if args.cmd == "scan":
         res = run_unified_scan(args.target)
+        if getattr(args, "voice", False) or os.environ.get("ZOTH_VOICE_ANNOUNCE") == "1":
+            announce_scan_result(
+                target=res.get("target", args.target),
+                target_type=res.get("type", "unknown"),
+                finding_count=len(res.get("findings", [])),
+                risk_score=res.get("risk", {}).get("score") if isinstance(res.get("risk"), dict) else None
+            )
         if args.canvas:
             with open(args.canvas, "w", encoding="utf-8") as f:
                 json.dump(res["obsidian_canvas"], f, indent=2)

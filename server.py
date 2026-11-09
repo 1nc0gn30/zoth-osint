@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Zoth OSINT Workstation Daemon v2.0 (server.py)
-Serves the Zoth OSINT Web Workstation on http://127.0.0.1:8148 and exposes:
+Serves the Zoth OSINT Web Workstation on http://127.0.0.1:8149 and exposes:
   GET  /health
   GET  /api/scan?target=<target>
   POST /api/scan
@@ -254,7 +254,7 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
 def main() -> None:
     parser = argparse.ArgumentParser(description="Zoth OSINT Workstation Daemon v2.0")
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8148, help="Bind port (default: 8148)")
+    parser.add_argument("--port", type=int, default=8149, help="Bind port (default: 8149)")
     args = parser.parse_args()
 
     srv = ThreadingHTTPServer((args.host, args.port), ZothOsintHandler)

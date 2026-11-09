@@ -91,8 +91,8 @@ zoth-osint arsenal --target nullai.tech
 # Start the JSON-RPC 2.0 Model Context Protocol (MCP) STDIO server for AI agents
 zoth-osint mcp
 
-# Launch the Web Workstation daemon on http://127.0.0.1:8148
-zoth-osint serve --port 8148
+# Launch the Web Workstation daemon on http://127.0.0.1:8149
+zoth-osint serve --port 8149
 ```
 
 ---

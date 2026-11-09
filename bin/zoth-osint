@@ -177,9 +177,9 @@ def main() -> int:
     p_run.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # serve
-    p_srv = sub.add_parser("serve", help="Start the Zoth OSINT Web Workstation daemon (default port 8148)")
+    p_srv = sub.add_parser("serve", help="Start the Zoth OSINT Web Workstation daemon (default port 8149)")
     p_srv.add_argument("--host", default="127.0.0.1")
-    p_srv.add_argument("--port", type=int, default=8148)
+    p_srv.add_argument("--port", type=int, default=8149)
 
     args = parser.parse_args()
     want_json = getattr(args, "json", False)

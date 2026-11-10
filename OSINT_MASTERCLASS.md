@@ -1,6 +1,6 @@
 # Sovereign OSINT Masterclass: Operational Tradecraft & Field Intelligence (v4.0)
 
-> **Architected by Neal Frazier (@1nc0gn30) • NullAI Platform & Neal Frazier Tech**  
+> **Architected by 1nc0gn30 (@1nc0gn30) • NullAI Platform**  
 > *Zero-Telemetry, Sovereign Reconnaissance, Blockchain Forensics & Graph Intelligence*
 
 ---
@@ -393,4 +393,4 @@ zoth-osint correlate target1.com target2.com --gexf /tmp/correlation.gexf
 
 ---
 
-*This document and course curriculum are licensed under open sovereign architecture for Neal Frazier Tech (@1nc0gn30) and the NullAI Platform.*
+*This document and course curriculum are licensed under open sovereign architecture for 1nc0gn30 (@1nc0gn30) and the NullAI Platform.*

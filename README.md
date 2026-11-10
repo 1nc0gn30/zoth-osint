@@ -1,7 +1,7 @@
 # Zoth OSINT (`zoth-osint` v3.0 — New-Age Sovereign Edition)
 
 > **Sovereign Open-Source Intelligence Engine, Multi-Pivot Recon Workstation, MCP Server & 32-Tool OSINT Orchestrator**  
-> Engineered by **Neal Frazier Tech (@1nc0gn30)** • [NullAI Platform](https://nullai.tech)
+> Engineered by **1nc0gn30 (@1nc0gn30)** • [NullAI Platform](https://nullai.tech)
 
 ---
 

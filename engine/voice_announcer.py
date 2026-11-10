@@ -1,6 +1,6 @@
 """
 Voice Announcer for Zoth-OSINT — Synthesizes tactical audio debriefs via Kokoro ONNX (:9394).
-Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform
+Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform
 """
 
 import json

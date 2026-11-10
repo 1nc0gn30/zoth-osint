@@ -2,7 +2,7 @@
 """
 Zoth OSINT MITRE ATT&CK Enterprise Matrix & Defensive Countermeasures Engine
 Module: engine/mitre_attack.py
-Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform
+Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform
 
 Maps discovered reconnaissance findings, network telemetry, exposed secrets, and
 infrastructure posture to formal MITRE ATT&CK Enterprise Matrix techniques (v14.1)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-zoth-osint v2.0 — Sovereign Open-Source Intelligence Engine & Orchestrator CLI
-Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform
+zoth-osint v4.0 — Sovereign Open-Source Intelligence Engine & Orchestrator CLI
+Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform
 """
 
 import argparse
@@ -11,6 +11,11 @@ import sys
 
 REAL_PATH = os.path.realpath(__file__)
 ROOT_DIR = os.path.dirname(os.path.dirname(REAL_PATH))
+if not os.path.isdir(os.path.join(ROOT_DIR, "engine")):
+    for _cand in (os.path.expanduser("~/NullAITech/zoth-osint"), "/opt/zoth-osint"):
+        if os.path.isdir(os.path.join(_cand, "engine")):
+            ROOT_DIR = _cand
+            break
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
@@ -43,15 +48,17 @@ from engine.osint_core import (  # noqa: E402
 def _print_banner() -> None:
     print("╔══════════════════════════════════════════════════════════════════════╗")
     print("║  ZOTH-OSINT v4.0 // SOVEREIGN CORRELATION & 32-TOOL ORCHESTRATOR    ║")
-    print("║  Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform      ║")
+    print("║  Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform               ║")
     print("╚══════════════════════════════════════════════════════════════════════╝")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="zoth-osint",
-        description="Zoth OSINT v2.0 — Sovereign Multi-Pivot Reconnaissance & Open-Source OSINT Orchestrator",
+        description="Zoth OSINT v4.0 — Sovereign Multi-Pivot Reconnaissance & Open-Source OSINT Orchestrator",
     )
+    parser.add_argument("--version", action="version", version="zoth-osint v4.0.0")
+    parser.add_argument("--status", action="store_true", help="Check local ZothOS OSINT workstation & arsenal status")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output")
     parser.add_argument("--voice", "--announce", dest="voice", action="store_true", help="Announce reconnaissance completion via Kokoro ONNX speech engine (:9394)")
     sub = parser.add_subparsers(dest="cmd")
@@ -97,7 +104,7 @@ def main() -> int:
 
     # phone
     p_ph = sub.add_parser("phone", help="ITU-T E.164 normalization, NANPA area code geolocation & messaging pivot URLs")
-    p_ph.add_argument("number", help="Phone number (e.g. +1-757-555-0199)")
+    p_ph.add_argument("number", help="Phone number (e.g. +1-800-555-0199)")
     p_ph.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # wayback
@@ -183,6 +190,15 @@ def main() -> int:
 
     args = parser.parse_args()
     want_json = getattr(args, "json", False)
+
+    if getattr(args, "status", False):
+        status_info = get_arsenal_status("nullai.tech")
+        if want_json:
+            print(json.dumps(status_info, indent=2))
+        else:
+            _print_banner()
+            print(f"Status: READY | Arsenal tools available: {status_info['installed_or_builtin']}/{status_info['total_tools']} | Local port: http://127.0.0.1:8149")
+        return 0
 
     if not args.cmd:
         if want_json:

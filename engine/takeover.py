@@ -6,7 +6,7 @@ SaaS fingerprints (GitHub Pages, AWS S3, Heroku, Netlify, Fastly, Ghost, Surge,
 Shopify, Vercel, Bitbucket, Zendesk, HubSpot, WordPress, Tumblr, Unbounce, Azure,
 Fly.io, Pantheon, ReadMe, Help Scout, Cargo, Render, Firebase) with zero pip dependencies.
 
-Engineered by Neal Frazier Tech (@1nc0gn30) • NullAI Platform
+Engineered by 1nc0gn30 (@1nc0gn30) • NullAI Platform
 """
 
 import concurrent.futures

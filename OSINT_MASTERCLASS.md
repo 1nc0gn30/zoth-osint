@@ -229,7 +229,7 @@ Raw phone numbers arrive in unstandardized formats (`(757) 555-0199`, `+1 757.55
 1. Strip non-digit characters.
 2. Prepend country code (`+1` for North American Numbering Plan).
 3. Generate RFC 3966 URI (`tel:+17575550199`).
-4. Resolve regional routing prefixes (e.g. `757` = Hampton Roads / Virginia Beach / Norfolk, VA; `212` = Manhattan, NY).
+4. Resolve regional routing prefixes (e.g. `757` = Eastern Tidewater / Norfolk, VA; `212` = Manhattan, NY).
 5. Generate verified deep-links for messaging registration probing:
    - WhatsApp: `https://wa.me/<digits>`
    - Telegram: `https://t.me/+<digits>`

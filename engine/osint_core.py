@@ -1133,7 +1133,7 @@ def recon_wallet(wallet_input: str) -> Dict[str, Any]:
 # 8. PHONE NUMBER E.164 & NANPA AREA CODE GEOLOCATION OSINT
 # ---------------------------------------------------------------------------
 NANPA_REGIONS = {
-    "757": "Hampton Roads / Virginia Beach / Norfolk, VA",
+    "757": "Eastern Tidewater / Norfolk, VA",
     "804": "Richmond / Central Virginia, VA",
     "703": "Northern Virginia / Arlington / Alexandria, VA",
     "571": "Northern Virginia / Tysons, VA",

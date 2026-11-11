@@ -6,6 +6,7 @@ IP/Infrastructure, GEOINT/Media Forensics, and Link Analysis — with live binar
 and safe bounded subprocess execution on Linux/ZothOS.
 """
 
+import os
 import shutil
 import subprocess
 import time
@@ -373,7 +374,7 @@ OPEN_SOURCE_OSINT_ARSENAL: List[Dict[str, Any]] = [
     },
 ]
 
-EXTRA_SEARCH_PATHS = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/zothos-ai-env/bin", "/home/zoth/.local/bin"]
+EXTRA_SEARCH_PATHS = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/zothos-ai-env/bin", os.path.expanduser("~/.local/bin")]
 
 
 def find_binary(binary_name: Optional[str]) -> Optional[str]:

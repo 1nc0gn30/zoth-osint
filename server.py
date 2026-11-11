@@ -54,11 +54,28 @@ class ZothOsintHandler(BaseHTTPRequestHandler):
         pass
 
     def _send_json(self, payload: dict, status: int = 200) -> None:
+        origin = self.headers.get("Origin", "")
+        allowed_origin = ""
+        if origin:
+            base = ":".join(origin.split(":")[:2])
+            if base in ("http://127.0.0.1", "http://localhost", "https://127.0.0.1", "https://localhost"):
+                allowed_origin = origin
+            else:
+                err = json.dumps({"error": "Cross-origin requests restricted to loopback"}).encode("utf-8")
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(err)))
+                self.end_headers()
+                self.wfile.write(err)
+                return
+
         raw = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        if allowed_origin:
+            self.send_header("Access-Control-Allow-Origin", allowed_origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()

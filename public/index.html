@@ -628,7 +628,7 @@
       <button class="preset-btn" type="button" data-preset="nullai.tech">nullai.tech (Domain + CT + Wayback)</button>
       <button class="preset-btn" type="button" data-preset="1.1.1.1">1.1.1.1 (Shodan InternetDB + ASN)</button>
       <button class="preset-btn" type="button" data-preset="contact@1nc0gn30.si">contact@1nc0gn30.si (Email + PGP)</button>
-      <button class="preset-btn" type="button" data-preset="GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK">SOL Wallet (Mainnet RPC)</button>
+      <button class="preset-btn" type="button" data-preset="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">SOL Wallet (Mainnet RPC)</button>
       <button class="preset-btn" type="button" data-preset="+1-757-555-0199">+1-757-555-0199 (Phone E.164 / 757)</button>
     </div>
 
@@ -802,7 +802,7 @@
 zoth-osint scan 1nc0gn30 --canvas /tmp/1nc0gn30.canvas --stix /tmp/1nc0gn30.stix.json
 
 # Blockchain Wallet RPC OSINT (Solana Mainnet, Ethereum EVM, Bitcoin)
-zoth-osint wallet GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK
+zoth-osint wallet TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
 
 # Phone E.164 &amp; NANPA Area Code Geolocation
 zoth-osint phone "+1-757-555-0199"
@@ -1515,7 +1515,7 @@ zoth-osint cases</pre>
           "Bitcoin Mempool Forensics: Tracking UTXOs, confirmed balances, and transaction history on mempool.space.",
           "Connecting pseudo-anonymous wallet addresses to real-world infrastructure and identity."
         ],
-        command: "zoth-osint wallet GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK"
+        command: "zoth-osint wallet TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
       },
       mod6: {
         title: "06 // Telephony (E.164), Geolocation (GEOINT) & Overpass Spatial",
@@ -1826,7 +1826,7 @@ zoth-osint cases</pre>
           { id: 'p5', label: 'DockerHub', type: 'OPS', color: '#32ff85', pivot: '1nc0gn30' },
           { id: 'dom1', label: 'nullai.tech', type: 'DOMAIN', color: '#a855f7', pivot: 'nullai.tech' },
           { id: 'dom2', label: '1nc0gn30.si', type: 'DOMAIN', color: '#a855f7', pivot: '1nc0gn30.si' },
-          { id: 'sol', label: 'SOL: GG2eQb…dXoK', type: 'WALLET', color: '#ffb800', pivot: 'GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK' },
+          { id: 'sol', label: 'SOL: Tokenkeg…VQ5DA', type: 'WALLET', color: '#ffb800', pivot: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
         ],
         edges: [
           { from: 'root', to: 'p0', label: 'DEV' },

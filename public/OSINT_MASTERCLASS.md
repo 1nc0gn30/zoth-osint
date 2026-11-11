@@ -196,13 +196,13 @@ Using the public Solana JSON-RPC cluster (`https://api.mainnet-beta.solana.com`)
 # Balance Check
 curl -s https://api.mainnet-beta.solana.com -X POST -H "Content-Type: application/json" -d '{
   "jsonrpc": "2.0", "id": 1, "method": "getBalance",
-  "params": ["GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK"]
+  "params": ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"]
 }'
 
 # Recent Transaction Signatures
 curl -s https://api.mainnet-beta.solana.com -X POST -H "Content-Type: application/json" -d '{
   "jsonrpc": "2.0", "id": 2, "method": "getSignaturesForAddress",
-  "params": ["GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK", {"limit": 10}]
+  "params": ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", {"limit": 10}]
 }'
 ```
 

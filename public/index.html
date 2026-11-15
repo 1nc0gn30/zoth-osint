@@ -39,13 +39,13 @@
         "softwareVersion": "2.0.0",
         "creator": {
           "@type": "Person",
-          "name": "1nc0gn30",
+          "name": "Neal Frazier Tech (@1nc0gn30) • NullAI Platform",
           "alternateName": "1nc0gn30",
           "url": "https://1nc0gn30.si"
         },
         "publisher": {
           "@type": "Organization",
-          "name": "1nc0gn30 / NullAI Platform",
+          "name": "Neal Frazier Tech (@1nc0gn30) • NullAI Platform",
           "url": "https://nullai.tech"
         },
         "offers": {
@@ -70,7 +70,7 @@
             "name": "Is Zoth OSINT 100% free and private?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. Zoth OSINT is 100% free, open-access, and local-first with zero paywalls or telemetry. Optional community support is available via Buy Us a Coffee or Solana."
+              "text": "Yes. Zoth OSINT is 100% free, open-access, and local-first with zero paywalls or telemetry. Optional community support is available via Buy Us a Coffee on Stripe (https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X) or Solana (GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK)."
             }
           }
         ]
@@ -380,6 +380,8 @@
       border-radius: 14px;
       padding: 18px;
       box-shadow: var(--shadow-card);
+      min-width: 0;
+      max-width: 100%;
     }
 
     .panel-header {
@@ -600,7 +602,11 @@
         <button class="btn btn-purple" id="exportStixBtn" type="button">⬇ STIX 2.1 .JSON</button>
         <button class="btn" id="exportGexfBtn" type="button">⬇ GEPHI .GEXF</button>
         <button class="btn" id="exportDossierBtn" type="button">⬇ DOSSIER .MD</button>
-        <a class="btn btn-coffee" href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer">☕ Buy Us a Coffee</a>
+        <div id="zoth-coffee-support-bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span style="padding:5px 9px;border-radius:6px;background:#065F46;color:#FFFFFF;font-size:0.72rem;font-weight:800;font-family:'JetBrains Mono',monospace;">✦ 100% FREE &amp; OPEN ACCESS · ZERO PAYWALLS</span>
+          <a class="btn" style="background:#D4AF37;color:#08080B;border-color:#D4AF37;font-weight:800;" href="https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X" target="_blank" rel="noopener noreferrer">☕ Buy Us a Coffee</a>
+          <button class="btn" type="button" style="background:#047857;color:#FFFFFF;border-color:rgba(255,255,255,0.2);font-weight:800;" onclick="navigator.clipboard?.writeText('GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK');this.textContent='✓ SOL Copied';">◎ SOL: GG2e...dXoK</button>
+        </div>
       </div>
     </header>
 
@@ -819,7 +825,7 @@ zoth-osint cases</pre>
     <!-- FOOTER -->
     <footer class="footer">
       <div>
-        Engineered by <strong>1nc0gn30 (@1nc0gn30)</strong> • <a href="https://nullai.tech" style="color:var(--accent-cyan);">NullAI Platform</a> • <a href="https://github.com/1nc0gn30/zoth-osint" style="color:var(--accent-green);">GitHub</a>
+        Engineered by <strong>Neal Frazier Tech (@1nc0gn30)</strong> • <a href="https://nullai.tech" style="color:var(--accent-cyan);">NullAI Platform</a> • <a href="https://github.com/1nc0gn30/zoth-osint" style="color:var(--accent-green);">GitHub</a>
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <span>100% Free &amp; Open-Access</span>

@@ -79,6 +79,6 @@ gitleaks detect --source . --no-banner --redact
 ## License & Support
 
 - **Open Access**: 100% free and open-source with zero paywalls or locked exports.
-- **Support**: [Buy Us a Coffee via Stripe](https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X)
+- **Support**: [Buy Us a Coffee via Stripe](https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X) · **Solana Tip Address**: `GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK`
 
-Engineered by **1nc0gn30** ([@1nc0gn30](https://github.com/1nc0gn30) · [1nc0gn30.si](https://1nc0gn30.si)) · [NullAI Platform](https://nullai.tech) · [Zoth Studio](https://zoth.nullai.tech)
+Engineered by **Neal Frazier Tech (@1nc0gn30)** ([GitHub (zoth-osint)](https://github.com/1nc0gn30/zoth-osint)) · [NullAI Platform](https://nullai.tech) · [Zoth Studio](https://zoth.nullai.tech)

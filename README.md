@@ -82,3 +82,24 @@ gitleaks detect --source . --no-banner --redact
 - **Support**: [Buy Us a Coffee via Stripe](https://buy.stripe.com/3cIfZg27PdKo2D64Ocfw40X) · **Solana Tip Address**: `GG2eQbVh8ut1BK6j1A2tz7pSySdLpD38BgyEhGcxdXoK`
 
 Engineered by **Neal Frazier Tech (@1nc0gn30)** ([GitHub (zoth-osint)](https://github.com/1nc0gn30/zoth-osint)) · [NullAI Platform](https://nullai.tech) · [Zoth Studio](https://zoth.nullai.tech)
+
+## Sovereign Surfaces
+
+_Machine-generated surface inventory (docs/tools/layerD_probe.py). Do not hand-edit; re-run the probe instead.
+
+**What it does.** Zoth OSINT Workstation & Masterclass — Zoth OSINT v4.0 — Sovereign Multi-Pivot Reconnaissance & Open-Source OSINT Orchestrator
+
+**Category.** Security & Recon  ·  **Version.** 4.0.0  ·  **Execution type.** `hybrid`
+
+**Architecture & port.** Canonical source: `~/NullAITech/zoth-osint`. Assigned `localPort` **8149** (`http://127.0.0.1:8149`).
+
+**ZothOS CLI usage.**
+
+```bash
+zoth-osint --help     # exit 0
+zoth-osint --json     # exit 0
+```
+
+**Zoth Studio route.** https://zoth.nullai.tech/tools/zoth-osint
+
+_Verified 2026-11-15 across the three install surfaces (`/usr/local/bin`, `~/.local/bin`, `zoth-os/config/includes.chroot/usr/local/bin`)._

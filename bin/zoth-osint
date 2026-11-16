@@ -104,7 +104,7 @@ def main() -> int:
 
     # phone
     p_ph = sub.add_parser("phone", help="ITU-T E.164 normalization, NANPA area code geolocation & messaging pivot URLs")
-    p_ph.add_argument("number", help="Phone number (e.g. +1-800-555-0199)")
+    p_ph.add_argument("number", help="Phone number (e.g. +1XXXXXXXXXX)")
     p_ph.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # wayback
